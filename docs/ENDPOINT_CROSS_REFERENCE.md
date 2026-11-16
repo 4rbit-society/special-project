@@ -42,7 +42,7 @@ All **27 mounted method/path combinations** have authenticated-client methods an
 - [adapters.ts](../apps/web/src/lib/adapters.ts) maps snake_case API fields and numeric IDs into UI models. It preserves completion timestamps and excludes client-supplied status/completion from editor saves.
 - [App.tsx](../apps/web/src/App.tsx) restores a session with GET /auth/me before rendering the workspace. Data is fetched per authenticated user and cleared on logout/expiry/account changes. Session generations discard late results from previous sessions.
 - Browser data is server-backed in memory; old demo local-storage datasets are not read or migrated. Only the JWT is retained in session storage, or local storage when Remember me is selected. Tokens expire according to the backend policy.
-- Dashboard and Progress use backend summaries. Recent completion times are displayed from server timestamps. Calendar dates use UTC consistently with backend progress; the UI formats completion instants for the browser.
+- Dashboard and Progress use backend summaries. Recent completion times are displayed from server timestamps. The browser passes its local calendar date to backend progress; completion instants remain UTC in storage and use browser-local display.
 - Child cards come from GET /cards. Hidden custom cards are filtered from the board; administrators load includeHidden=true and can show/hide/delete only their own custom cards.
 
 ## Atomic schedule editor save
@@ -54,6 +54,7 @@ All **27 mounted method/path combinations** have authenticated-client methods an
   "childId": 1,
   "date": "2026-11-17",
   "scheduleId": 12,
+  "expectedRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "expectedTaskIds": [9],
   "tasks": [
     { "id": 9, "start_time": "08:15", "duration_min": 10 },
@@ -63,9 +64,9 @@ All **27 mounted method/path combinations** have authenticated-client methods an
 }
 ```
 
-For a new schedule, omit scheduleId and send expectedTaskIds: []. The backend validates every task and child ownership, locks the schedule data, applies additions/removals/order/timing in one transaction and returns the full saved schedule. Existing IDs must belong to that schedule. At most 500 draft tasks are accepted. The request cannot set completion state.
+For a new schedule, omit scheduleId and expectedRevision and send expectedTaskIds: []. For an existing schedule, send its loaded revision in expectedRevision (the example hash is a placeholder). The backend validates every task and child ownership, locks the schedule data, applies additions/removals/order/timing in one transaction and returns the full saved schedule. Existing IDs must belong to that schedule. At most 500 draft tasks are accepted. The request cannot set completion state.
 
-The loaded task ID order is a structural concurrency check: a changed schedule identity, membership or task order returns 409. This is not a full version check for concurrent edits to timing. Completion state is read from the database and preserved. Failed writes roll back both new schedule creation and task edits.
+The loaded task IDs and revision check schedule identity, date, membership, order, content and timing. Concurrent changes return 409. Completion state is read from the database and preserved. Failed writes roll back both new schedule creation and task edits.
 
 Drafts remain in the editor on a failed save. Preview is a read-only snapshot of the selected date/draft and returns to the same editor. Quick task actions use the existing POST/PUT/DELETE task routes. Copies into a new date use POST /schedules with copyFrom; copying into an existing editor fetches the source and produces an unsaved draft. Saved schedule date changes and deletion use explicit controls.
 
@@ -75,8 +76,10 @@ Drafts remain in the editor on a failed save. Preview is a read-only snapshot of
 
 ## Verification and remaining limits
 
-- 171 API unit tests, 5 client/adapter tests, 23 database tests, 3 API/MySQL integration tests and 5 real-browser tests passed during this implementation. Production build and workspace typechecks passed.
+- The original endpoint integration passed 171 API unit tests, 5 client/adapter tests, 23 database tests, 3 API/MySQL integration tests and 5 real-browser tests. See [the debugging review](POLISH_REVIEW.md) for expanded validation after polishing. Production build and workspace typechecks passed.
 - Browser checks cover all 27 method/path combinations, desktop CRUD, saved state after reload, read-only preview, completion, cards, settings, copy/date/delete, logout, session expiry, unavailable API/retry, failed-save recovery, a 390px mobile flow and isolation after account switching.
 - [Browser tests](../apps/web/e2e/connected.spec.ts), [API draft tests](../apps/api/tests/group4/drafts.test.ts), and [database integration tests](../apps/api/src/db/feature-data.integration.test.ts) contain the assertions. [CI](../.github/workflows/api-tests.yml) runs client and browser tests as well as the backend suites.
 - Browser tests use a dedicated empty *_test database. The runner refuses existing users; cleanup requires a marker proving fixture creation by the current run and removes only its own users/seed caregiver.
 - This is not a full multi-browser, accessibility, load or usability certification. Actual speech audibility/voice availability still requires device testing. Optional timer, adjustable speech speed, photo upload and task-frequency analytics features are not added by endpoint integration.
+
+Existing schedule draft saves also send `expectedRevision` from the loaded schedule. A changed date, task order, content, or timing returns 409 while the editor retains its draft. Completion updates alone do not invalidate a draft.

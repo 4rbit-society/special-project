@@ -3,6 +3,7 @@ import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/prom
 import * as mock from '../mocks/data.js';
 import { getDatabasePool } from './pool.js';
 import { HttpError } from '../lib/errors.js';
+import { createHash } from 'node:crypto';
 
 export type { Activity, Child } from '@starter/shared';
 
@@ -513,10 +514,16 @@ export async function setTaskCompletion(task: Task, done: boolean): Promise<Task
   return normalizeTask(row);
 }
 
+export function scheduleRevision(schedule: Schedule, tasks: Task[]): string {
+  // Completion is deliberately excluded: marking Done must not invalidate an editor.
+  const snapshot = [schedule.id, schedule.child_id, schedule.schedule_date, tasks.map((task) => [task.id, task.activity_id, task.name, task.icon, task.start_time, task.duration_min, task.position])];
+  return createHash('sha256').update(JSON.stringify(snapshot)).digest('hex');
+}
+
 // The editor submits one draft so failures cannot leave half a schedule saved.
-export async function saveScheduleForUser(userId: number, draft: ScheduleDraftInput): Promise<Schedule & { tasks: Task[] }> {
+export async function saveScheduleForUser(userId: number, draft: ScheduleDraftInput): Promise<Schedule & { tasks: Task[]; revision: string }> {
   function validateSnapshot(schedule: Schedule | undefined, tasks: Task[]) {
-    if (schedule?.id !== draft.scheduleId || tasks.map((task) => task.id).join(',') !== draft.expectedTaskIds.join(',')) {
+    if (schedule?.id !== draft.scheduleId || tasks.map((task) => task.id).join(',') !== draft.expectedTaskIds.join(',') || (schedule && draft.expectedRevision !== scheduleRevision(schedule, tasks))) {
       throw new HttpError(409, 'This schedule changed. Reload it before saving your draft.');
     }
     if (draft.tasks.some((task) => task.id !== undefined && !tasks.some((current) => current.id === task.id))) {
@@ -547,7 +554,8 @@ export async function saveScheduleForUser(userId: number, draft: ScheduleDraftIn
       const task = input.id === undefined ? mock.addTask(schedule!.id, contents[index]!) : old.find((task) => task.id === input.id)!;
       mock.applyTaskUpdate(task, { start_time: input.start_time, duration_min: input.duration_min, position: index + 1 });
     });
-    return { ...schedule, tasks: mock.tasksForSchedule(schedule.id) };
+    const tasks = mock.tasksForSchedule(schedule.id);
+    return { ...schedule, tasks, revision: scheduleRevision(schedule, tasks) };
   }
   const connection = await getDatabasePool().getConnection();
   try {
@@ -588,7 +596,8 @@ export async function saveScheduleForUser(userId: number, draft: ScheduleDraftIn
     }
     const [rows] = await connection.query<TaskRow[]>('SELECT * FROM tasks WHERE schedule_id = ? ORDER BY position', [schedule.id]);
     await connection.commit();
-    return { ...schedule, tasks: rows.map(normalizeTask) };
+    const tasks = rows.map(normalizeTask);
+    return { ...schedule, tasks, revision: scheduleRevision(schedule, tasks) };
   } catch (error) {
     await connection.rollback();
     if (isDuplicateEntry(error)) throw new HttpError(409, 'This schedule changed. Reload it before saving your draft.');

@@ -67,10 +67,13 @@ function speak(text: string, onUnavailable: () => void): boolean {
     onUnavailable();
     return false;
   }
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 0.85;
-  window.speechSynthesis.speak(utterance);
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.85;
+    utterance.onerror = (event) => { if (event.error !== 'canceled' && event.error !== 'interrupted') onUnavailable(); };
+    window.speechSynthesis.speak(utterance);
+  } catch { onUnavailable(); return false; }
   return true;
 }
 

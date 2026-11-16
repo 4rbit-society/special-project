@@ -29,10 +29,11 @@ describe('API transport', () => {
 });
 describe('schedule contract adapters', () => {
   it('preserves server ids and completion times while excluding status from draft mutations', () => {
-    const saved = scheduleFromApi({ id: 12, child_id: 5, schedule_date: '2099-01-01', created_at: '', tasks: [{ id: 9, schedule_id: 12, activity_id: null, name: 'Custom', icon: '⭐', start_time: null, duration_min: null, position: 1, status: 'done', completed_at: '2026-11-17T00:00:00Z' }] }, []);
+    const saved = scheduleFromApi({ id: 12, revision: 'a'.repeat(64), child_id: 5, schedule_date: '2099-01-01', created_at: '', tasks: [{ id: 9, schedule_id: 12, activity_id: null, name: 'Custom', icon: '⭐', start_time: null, duration_min: null, position: 1, status: 'done', completed_at: '2026-11-17T00:00:00Z' }] }, []);
     expect(saved.tasks[0]?.completedAt).toBe('2026-11-17T00:00:00Z');
     const payload = draftToApi({ ...saved, tasks: [...saved.tasks, { id: 'draft-1', activityId: '3', name: 'Play', icon: '🧸', category: 'Play', startTime: '', duration: null, status: 'pending' }] }, saved);
     expect(payload.expectedTaskIds).toEqual([9]);
+    expect(payload.expectedRevision).toBe('a'.repeat(64));
     expect(payload.tasks).toEqual([{ id: 9, start_time: null, duration_min: null }, { activityId: 3, start_time: null, duration_min: null }]);
   });
 });

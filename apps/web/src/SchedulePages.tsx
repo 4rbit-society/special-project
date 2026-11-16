@@ -1,8 +1,9 @@
 import { PREDEFINED_ICONS } from '@starter/shared/constants';
 import { ChildView } from './ChildView';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { DailySchedule, ScheduleTask, SharedPageProps } from './model';
 import './schedule.css';
+import { Modal } from './components/Modal';
 
 type SchedulePageProps = SharedPageProps & { page: 'schedules' | 'tasks' };
 
@@ -15,6 +16,7 @@ const previousDate = (date: string) => {
 };
 
 function dateLabel(date: string, weekday = false) {
+  if (!date || Number.isNaN(new Date(`${date}T12:00:00`).getTime())) return 'Choose a date';
   return new Intl.DateTimeFormat('en-GB', {
     ...(weekday ? { weekday: 'long' as const } : {}), day: 'numeric', month: 'long', year: 'numeric',
   }).format(new Date(`${date}T12:00:00`));
@@ -45,7 +47,6 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
   const [reload, setReload] = useState(0);
   const [moveDate, setMoveDate] = useState(today);
   const [quickActivity, setQuickActivity] = useState(activities[0]?.activityId ?? '');
-  useEffect(() => { let cancelled = false; setReady(false); setFailed(false); setMoveDate(date); if (selectedChildId) void actions.loadSchedule(selectedChildId, date).then((result) => { if (!cancelled) { setReady(result !== undefined); setFailed(result === undefined); } }); return () => { cancelled = true; }; }, [selectedChildId, date, actions.loadSchedule, reload]);
   const [draft, setDraft] = useState<ScheduleTask[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [time, setTime] = useState('');
@@ -60,19 +61,17 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
   const [customCategory, setCustomCategory] = useState('Other');
   const [notice, setNotice] = useState('');
   const child = data.children.find((item) => item.id === selectedChildId);
-  const savedSchedule = useMemo(
-    () => data.schedules.find((item) => item.childId === selectedChildId && item.date === date),
-    [data.schedules, selectedChildId, date],
-  );
-  const savedKey = savedSchedule ? JSON.stringify(savedSchedule.tasks) : '';
-
+  const [baseSchedule, setBaseSchedule] = useState<DailySchedule | null>(null);
+  const savedSchedule = page === 'tasks' ? data.schedules.find((item) => item.childId === selectedChildId && item.date === date) : baseSchedule ?? undefined;
   useEffect(() => {
-    const tasks = savedSchedule?.tasks.map((task) => ({ ...task })) ?? [];
-    setDraft(tasks);
-    setSelectedTaskId(tasks[4]?.id ?? tasks[0]?.id ?? null);
-    setMobileEditing(false);
-  }, [selectedChildId, date, savedKey]);
-  useEffect(() => setNotice(''), [selectedChildId, date]);
+    let cancelled = false; setReady(false); setFailed(false); setMoveDate(date);
+    if (selectedChildId) void actions.loadSchedule(selectedChildId, date).then((result) => {
+      if (cancelled) return;
+      setReady(result !== undefined); setFailed(result === undefined);
+      if (result !== undefined) { setBaseSchedule(result); setDraft(result?.tasks.map((task) => ({ ...task })) ?? []); setSelectedTaskId(null); setMobileEditing(false); setNotice(''); }
+    });
+    return () => { cancelled = true; };
+  }, [selectedChildId, date, page, actions.loadSchedule, reload]);
 
   const selected = draft.find((task) => task.id === selectedTaskId) ?? null;
   useEffect(() => {
@@ -80,24 +79,43 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
     setDuration(selected?.duration?.toString() ?? '');
   }, [selectedTaskId, selected?.startTime, selected?.duration]);
 
-  const dirty = JSON.stringify(draft) !== JSON.stringify(savedSchedule?.tasks ?? []);
+  const detailsChanged = !!selected && (time !== selected.startTime || duration !== (selected.duration?.toString() ?? ''));
+  const dirty = JSON.stringify(draft) !== JSON.stringify(baseSchedule?.tasks ?? []) || detailsChanged;
+  useEffect(() => {
+    if (page !== 'schedules') return;
+    const cleanup = actions.setNavigationGuard(() => !dirty || window.confirm('Discard unsaved schedule changes?'));
+    const beforeUnload = (event: BeforeUnloadEvent) => { if (dirty) { event.preventDefault(); event.returnValue = ''; } };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => { cleanup(); window.removeEventListener('beforeunload', beforeUnload); };
+  }, [dirty, page, actions.setNavigationGuard]);
+  function changeDate(next: string) { if (next && next !== date && (!dirty || page !== 'schedules' || window.confirm('Discard unsaved schedule changes?'))) setDate(next); }
+  function withDetails(): ScheduleTask[] | undefined {
+    if (!selected) return draft;
+    const parsed = duration.trim() === '' ? null : Number(duration);
+    if (parsed !== null && (!Number.isInteger(parsed) || parsed < 1 || parsed > 1440)) { setNotice('Enter a whole number from 1 to 1440 for duration.'); return; }
+    return draft.map((task) => task.id === selected.id ? { ...task, startTime: time, duration: parsed } : task);
+  }
   const done = savedSchedule?.tasks.filter((task) => task.status === 'done').length ?? 0;
 
   async function save() {
+    const tasks = withDetails(); if (!tasks) return;
     const schedule: DailySchedule = {
       id: savedSchedule?.id ?? `schedule-${selectedChildId}-${date}`,
-      childId: selectedChildId, date, tasks: draft,
+      childId: selectedChildId, date, tasks,
     };
-    if (await actions.updateSchedule(schedule)) setNotice('Schedule saved');
+    const saved = await actions.updateSchedule(schedule, baseSchedule ?? undefined);
+    if (saved) { setBaseSchedule(saved); setDraft(saved.tasks); setSelectedTaskId(null); setNotice('Schedule saved'); }
   }
 
   function add(activity: LibraryActivity) {
+    const tasks = withDetails(); if (!tasks) return false;
     const task = newTask(activity);
-    setDraft((current) => [...current, task]);
+    setDraft([...tasks, task]);
     setSelectedTaskId(task.id);
     setShowLibrary(false);
     setMobileEditing(false);
     setNotice('');
+    return true;
   }
 
   function move(index: number, amount: number) {
@@ -118,25 +136,26 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
   }
 
   function applyDetails() {
-    if (!selected) return;
-    const parsedDuration = duration.trim() === '' ? null : Number(duration);
-    if (parsedDuration !== null && (!Number.isInteger(parsedDuration) || parsedDuration < 1 || parsedDuration > 1440)) {
-      setNotice('Enter a whole number from 1 to 1440 for duration.');
-      return;
-    }
-    setDraft((current) => current.map((task) => task.id === selected.id
-      ? { ...task, startTime: time, duration: parsedDuration } : task));
+    const tasks = withDetails(); if (!tasks) return;
+    setDraft(tasks);
     setNotice('Activity details updated in draft.');
     setMobileEditing(false);
   }
 
   async function copySchedule() {
-    if (!savedSchedule) { if (draft.length && !window.confirm('Replace this unsaved draft with the copied schedule?')) return; if (await actions.copySchedule(selectedChildId, date, copyDate)) { setCopyOpen(false); setNotice('Copied schedule saved'); } return; }
-    const source = await actions.loadSchedule(selectedChildId, copyDate);
-    if (!source) {
-      setNotice(`No schedule found for ${dateLabel(copyDate)}.`);
+    if (!copyDate || copyDate === date) { setNotice('Choose a different source date.'); return; }
+    if (dirty && !window.confirm('Replace this unsaved draft with the copied schedule?')) return;
+    if (!savedSchedule) {
+      if (await actions.copySchedule(selectedChildId, date, copyDate)) {
+        const result = await actions.loadSchedule(selectedChildId, date);
+        if (result) { setBaseSchedule(result); setDraft(result.tasks); setSelectedTaskId(null); setCopyOpen(false); setNotice('Copied schedule saved'); }
+      }
       return;
     }
+    const source = await actions.loadSchedule(selectedChildId, copyDate);
+    if (source === undefined) return;
+    if (source === null) { setNotice(`No schedule found for ${dateLabel(copyDate)}.`); return; }
+    setSelectedTaskId(null);
     setDraft(source.tasks.map((task) => ({ ...task, id: newTask(task).id, status: 'pending', completedAt: null })));
     setCopyOpen(false);
     setNotice(`Copied ${source.tasks.length} activities from ${dateLabel(copyDate)} into the draft.`);
@@ -159,7 +178,7 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
         <button className="button button-outline" onClick={() => actions.navigate('schedules')}>Edit schedule</button>
         <button className="button button-primary" onClick={() => actions.openChild(child.id)}>Open Child view</button>
       </div>
-      <div className="schedule-status-controls"><label>Child<select value={selectedChildId} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>Date<input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label></div>
+      <div className="schedule-status-controls"><label>Child<select value={selectedChildId} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>Date<input type="date" value={date} onChange={(event) => changeDate(event.target.value)} /></label></div>
       {savedSchedule && <div><label>Add activity<select value={quickActivity} onChange={(event) => setQuickActivity(event.target.value)}>{activities.map((item) => <option key={item.activityId} value={item.activityId}>{item.name}</option>)}</select></label><button className="button button-primary" disabled={!quickActivity} onClick={() => { void actions.addTask(savedSchedule, quickActivity); }}>Add activity</button></div>}
       <h2 className="schedule-status-count">{done} of {tasks.length} done · {tasks.length ? Math.round(done / tasks.length * 100) : 0}%</h2>
       {tasks.length ? <div className="schedule-status-list">{tasks.map((task, index) => <article className="schedule-status-row" key={task.id}>
@@ -176,13 +195,13 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
     {notice && <div className={`schedule-notice ${notice === 'Schedule saved' ? 'success' : ''}`} role="status">{notice}</div>}
     <div className="schedule-controls">
       <label>Child<select value={selectedChildId} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-      <label>Date<input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
+      <label>Date<input type="date" value={date} onChange={(event) => changeDate(event.target.value)} /></label>
       <button className="button button-outline schedule-copy" onClick={() => { setCopyDate(previousDate(date)); setCopyOpen(true); }}>Copy from date</button>
-      <button className="button button-outline schedule-preview" onClick={() => setPreviewOpen(true)}>Preview</button>
+      <button className="button button-outline schedule-preview" onClick={() => { const tasks = withDetails(); if (tasks) { setDraft(tasks); setPreviewOpen(true); } }}>Preview</button>
       <button className="button button-primary schedule-save-top" onClick={save}>Save schedule</button>
     </div>
     <div className="schedule-mobile-add"><button className="button button-primary" onClick={() => setShowLibrary(true)}>Add activity</button><button className="button button-outline" onClick={() => setCopyOpen(true)}>Copy from date</button></div>
-    {savedSchedule && <div className="schedule-controls"><label>Move saved schedule to date<input type="date" value={moveDate} onChange={(event) => setMoveDate(event.target.value)} /></label><button className="button button-outline" disabled={dirty || !moveDate || moveDate === date} onClick={async () => { if (await actions.moveSchedule(savedSchedule, moveDate)) setDate(moveDate); }}>Change date</button><button className="button button-danger" onClick={async () => { if (window.confirm('Delete this saved schedule and all its tasks?') && await actions.deleteSchedule(savedSchedule)) setReload((value) => value + 1); }}>Delete schedule</button></div>}
+    {savedSchedule && <div className="schedule-controls"><label>Move saved schedule to date<input type="date" value={moveDate} onChange={(event) => setMoveDate(event.target.value)} /></label><button className="button button-outline schedule-manage" disabled={dirty || !moveDate || moveDate === date} onClick={async () => { if (await actions.moveSchedule(savedSchedule, moveDate)) setDate(moveDate); }}>Change date</button><button className="button button-danger schedule-manage" onClick={async () => { if (window.confirm('Delete this saved schedule and all its tasks?') && await actions.deleteSchedule(savedSchedule)) setReload((value) => value + 1); }}>Delete schedule</button></div>}
     <p className="schedule-count">{draft.length} {draft.length === 1 ? 'activity' : 'activities'}</p>
     <div className="schedule-columns">
       <section className={`schedule-panel schedule-library ${showLibrary ? 'is-open' : ''}`}>
@@ -197,7 +216,7 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
         <h2>Today’s schedule</h2><p className="schedule-helper">Drag to reorder, or use Move up / Move down.</p>
         <div className="schedule-tasks">{draft.length ? draft.map((task, index) => <article className={`schedule-task ${selectedTaskId === task.id ? 'selected' : ''}`} key={task.id} draggable onDragStart={(event) => event.dataTransfer.setData('text/plain', String(index))} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const value = event.dataTransfer.getData('text/plain'); if (!/^\d+$/.test(value)) return; const from = Number(value); if (from < 0 || from >= draft.length) return; setDraft((items) => { const next = [...items]; const [item] = next.splice(from, 1); next.splice(index, 0, item!); return next; }); }}>
           <div className="schedule-task-main"><strong className="schedule-task-number">{index + 1}</strong><ActivityIcon src={task.icon} /><div className="schedule-task-description"><strong>{task.name}</strong><span className={task.startTime ? '' : 'no-time'}>{task.startTime ? `${task.startTime}${task.duration ? ` · ${task.duration} min` : ''}` : 'Time not set'}</span></div><CategoryChip category={task.category} /></div>
-          <div className="schedule-task-actions"><span className="schedule-grip" aria-hidden="true">⠿</span><button className="schedule-arrow" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move ${task.name} up`}>↑</button><button className="schedule-arrow" onClick={() => move(index, 1)} disabled={index === draft.length - 1} aria-label={`Move ${task.name} down`}>↓</button><button className="button button-outline schedule-mobile-move" onClick={() => move(index, -1)} disabled={index === 0}>Move up</button><button className="button button-outline schedule-mobile-move" onClick={() => move(index, 1)} disabled={index === draft.length - 1}>Move down</button><button className="button button-outline" onClick={() => { setSelectedTaskId(task.id); setMobileEditing(true); }}>Edit</button><button className="button button-outline schedule-row-remove" onClick={() => remove(task.id)}>Remove</button></div>
+          <div className="schedule-task-actions"><span className="schedule-grip" aria-hidden="true">⠿</span><button className="schedule-arrow" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move ${task.name} up`}>↑</button><button className="schedule-arrow" onClick={() => move(index, 1)} disabled={index === draft.length - 1} aria-label={`Move ${task.name} down`}>↓</button><button className="button button-outline schedule-mobile-move" onClick={() => move(index, -1)} disabled={index === 0}>Move up</button><button className="button button-outline schedule-mobile-move" onClick={() => move(index, 1)} disabled={index === draft.length - 1}>Move down</button><button className="button button-outline" onClick={() => { const tasks = withDetails(); if (!tasks) return; setDraft(tasks); setSelectedTaskId(task.id); setMobileEditing(true); }}>Edit</button><button className="button button-outline schedule-row-remove" onClick={() => remove(task.id)}>Remove</button></div>
         </article>) : <div className="schedule-empty"><p>No activities added yet.</p><button className="button button-primary" onClick={() => setShowLibrary(true)}>Add activity</button></div>}</div>
       </section>
       <aside className={`schedule-panel schedule-details ${mobileEditing ? 'mobile-visible' : ''}`}>
@@ -206,7 +225,7 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
     </div>
     <div className="schedule-unsaved"><span><i />{dirty ? 'You have unsaved changes' : 'Schedule is up to date'}</span><div><button className="button button-outline" onClick={() => { setDraft(savedSchedule?.tasks.map((task) => ({ ...task })) ?? []); setSelectedTaskId(null); }}>Discard changes</button><button className="button button-primary" onClick={save}>Save schedule</button></div></div>
     <button className="schedule-status-link" onClick={() => actions.navigate('tasks')}>Recording what actually happened? Open Task status →</button>
-    {copyOpen && <div className="schedule-modal-backdrop"><div className="schedule-modal" role="dialog" aria-modal="true" aria-labelledby="copy-title"><h2 id="copy-title">Copy schedule from date</h2><p>Choose a day to copy activities into this draft.</p><label>Source date<input type="date" value={copyDate} onChange={(event) => setCopyDate(event.target.value)} /></label><div className="schedule-modal-actions"><button className="button button-outline" onClick={() => setCopyOpen(false)}>Cancel</button><button className="button button-primary" onClick={copySchedule}>Copy schedule</button></div></div></div>}
-    {customOpen && <div className="schedule-modal-backdrop"><form className="schedule-modal" role="dialog" aria-modal="true" aria-labelledby="custom-title" onSubmit={(event) => { event.preventDefault(); if (!customName.trim()) return; add({ activityId: `custom-${Date.now()}`, name: customName.trim(), icon: customIcon, category: customCategory }); setCustomName(''); setCustomOpen(false); }}><h2 id="custom-title">Custom activity</h2><label>Name<input required maxLength={100} value={customName} onChange={(event) => setCustomName(event.target.value)} placeholder="Activity name" /></label><label>Picture<select value={customIcon} onChange={(event) => setCustomIcon(event.target.value)}>{PREDEFINED_ICONS.map((icon) => <option key={icon} value={icon}>{icon}</option>)}</select></label><label>Category<select value={customCategory} onChange={(event) => setCustomCategory(event.target.value)}>{['Hygiene', 'Food', 'School', 'Play', 'Other'].map((category) => <option key={category}>{category}</option>)}</select></label><div className="schedule-modal-actions"><button type="button" className="button button-outline" onClick={() => setCustomOpen(false)}>Cancel</button><button className="button button-primary" type="submit">Add activity</button></div></form></div>}
+    {copyOpen && <Modal titleId="copy-title" onClose={() => setCopyOpen(false)}><div className="schedule-modal"><h2 id="copy-title">Copy schedule from date</h2><p>Choose a day to copy activities into this draft.</p><label>Source date<input type="date" value={copyDate} onChange={(event) => setCopyDate(event.target.value)} /></label><p role="status">{notice}</p><div className="schedule-modal-actions"><button className="button button-outline" onClick={() => setCopyOpen(false)}>Cancel</button><button className="button button-primary" onClick={copySchedule}>Copy schedule</button></div></div></Modal>}
+    {customOpen && <Modal titleId="custom-title" onClose={() => setCustomOpen(false)}><form className="schedule-modal" onSubmit={(event) => { event.preventDefault(); if (!customName.trim()) return; if (add({ activityId: `custom-${Date.now()}`, name: customName.trim(), icon: customIcon, category: customCategory })) { setCustomName(''); setCustomOpen(false); } }}><h2 id="custom-title">Custom activity</h2><label>Name<input required maxLength={100} value={customName} onChange={(event) => setCustomName(event.target.value)} placeholder="Activity name" /></label><label>Picture<select value={customIcon} onChange={(event) => setCustomIcon(event.target.value)}>{PREDEFINED_ICONS.map((icon) => <option key={icon} value={icon}>{icon}</option>)}</select></label><label>Category<select value={customCategory} onChange={(event) => setCustomCategory(event.target.value)}>{['Hygiene', 'Food', 'School', 'Play', 'Other'].map((category) => <option key={category}>{category}</option>)}</select></label><div className="schedule-modal-actions"><button type="button" className="button button-outline" onClick={() => setCustomOpen(false)}>Cancel</button><button className="button button-primary" type="submit">Add activity</button></div></form></Modal>}
   </div>;
 }

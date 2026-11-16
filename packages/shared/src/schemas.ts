@@ -75,9 +75,13 @@ export const saveScheduleSchema = z.strictObject({
   childId: z.number().int().positive(),
   date: isoDate,
   scheduleId: z.number().int().positive().optional(),
+  expectedRevision: z.string().regex(/^[a-f0-9]{64}$/).optional(),
   expectedTaskIds: z.array(z.number().int().positive()).max(500),
   tasks: z.array(draftTaskSchema).max(500),
 }).superRefine((draft, ctx) => {
+  if ((draft.scheduleId === undefined) !== (draft.expectedRevision === undefined)) {
+    ctx.addIssue({ code: 'custom', message: 'Existing schedules require the revision returned when they were loaded' });
+  }
   const ids = draft.tasks.flatMap((task) => task.id === undefined ? [] : [task.id]);
   if (new Set(ids).size !== ids.length || new Set(draft.expectedTaskIds).size !== draft.expectedTaskIds.length) {
     ctx.addIssue({ code: 'custom', message: 'Task ids must be unique' });
@@ -138,6 +142,7 @@ export const updateCardVisibilitySchema = z.strictObject({
 
 export const progressQuerySchema = z.object({
   range: z.enum(['7d']).default('7d'),
+  date: isoDate.optional(),
 });
 
 export const updateSettingsSchema = z.strictObject({

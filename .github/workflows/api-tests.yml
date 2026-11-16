@@ -43,12 +43,7 @@ jobs:
         run: npm ci
 
       - name: Run API unit tests
-        run: >-
-          npm test -w @starter/api --
-          --exclude tests/group1/db.test.ts
-          --exclude tests/group1/schema.test.ts
-          --exclude tests/group1/seed.test.ts
-          --exclude tests/group2/user-repository.test.ts
+        run: npm test -w @starter/api
 
       - name: Run frontend API client tests
         run: npm test -w @starter/web
@@ -69,12 +64,7 @@ jobs:
           DB_USER: root
           DB_PASSWORD: rootpassword
           DB_NAME: special_project_test
-        run: >-
-          npm test -w @starter/api --
-          tests/group1/db.test.ts
-          tests/group1/schema.test.ts
-          tests/group1/seed.test.ts
-          tests/group2/user-repository.test.ts
+        run: npm run test:database -w @starter/api
 
       - name: Install browser test runtime
         run: npx playwright install --with-deps chromium

@@ -13,6 +13,7 @@ import {
   tasksForSchedule,
   type Schedule,
   saveScheduleForUser,
+  scheduleRevision,
 } from '../db/feature-data.js';
 import {
   createScheduleSchema,
@@ -27,7 +28,8 @@ export function schedulesRouter(users: UserRepository): Router {
   router.use(requireAuth(users));
 
   async function serializeSchedule(schedule: Schedule) {
-    return { ...schedule, tasks: await tasksForSchedule(schedule.id) };
+    const tasks = await tasksForSchedule(schedule.id);
+    return { ...schedule, tasks, revision: scheduleRevision(schedule, tasks) };
   }
 
   async function ownedSchedule(req: Request, id: number): Promise<Schedule> {

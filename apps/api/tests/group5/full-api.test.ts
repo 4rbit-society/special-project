@@ -1,11 +1,12 @@
 import request from 'supertest';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestApp } from '../../src/testing/testApp.js';
 import { resetStore } from '../../src/mocks/data.js';
 
 const { app, alice, bob, group5Repository } = await createTestApp();
 
-const DATE = '2026-11-14';
+const TEST_NOW = new Date();
+const DATE = TEST_NOW.toISOString().slice(0, 10);
 
 const PROTECTED: [string, string][] = [
   ['get', '/api/children'],
@@ -23,8 +24,14 @@ const PROTECTED: [string, string][] = [
 ];
 
 beforeEach(() => {
+  // Keep schedule dates, completion timestamps and today's progress on the same UTC day.
+  vi.useFakeTimers({ toFake: ['Date'], now: TEST_NOW });
   resetStore();
   group5Repository.reset();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('uniform authentication guard (task 5.5)', () => {
@@ -108,7 +115,7 @@ describe('end-to-end MVP flow through the API (task 5.5)', () => {
       .set(alice)
       .query({ range: '7d' });
     expect(progress.status).toBe(200);
-    expect(progress.body.today).toMatchObject({ done: 1, total: 1 });
+    expect(progress.body.today).toMatchObject({ date: DATE, done: 1, total: 1, percentage: 100 });
     const settings = await request(app)
       .put('/api/settings')
       .set(alice)

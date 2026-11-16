@@ -6,7 +6,7 @@ An npm workspace with React + Vite, Express, and a shared types package. Require
 
 The responsive frontend follows the [Araw Figma design](https://www.figma.com/design/LIUnykdWEJ139auGBKjTUs/SRS-v2?node-id=26-3). It includes the staff dashboard, child profiles, schedule editor, task status, progress, settings, picture card management, and the child schedule and communication board. Figma SVG assets and Nunito fonts are bundled locally.
 
-Run the frontend alone without MySQL or the API:
+Start the frontend development server:
 
 ```sh
 npm ci
@@ -15,7 +15,7 @@ npm run dev -w @starter/web
 
 Open http://localhost:5173. On PowerShell systems that block `npm.ps1`, use `npm.cmd` instead of `npm`.
 
-This frontend currently uses demo profiles (Mika, Leo and Ari) and stores edits in browser local storage. Login and registration demonstrate the UI only. The backend endpoints described below are separate and are not connected to these screens yet. The communication board uses the browser's speech synthesis when available.
+The screens now use the authenticated backend for profiles, schedules/tasks, cards, progress and settings. Start MySQL and the API using the setup below before logging in. Register a real account; the old frontend demo data is not imported. Tokens are stored in session storage by default or local storage when Remember me is selected; logout clears both and discards user data. Expired sessions return to login. The communication board uses browser speech synthesis when available. Schedule/progress calendar dates use UTC.
 
 Verify the frontend with `npm run typecheck -w @starter/web` and `npm run build -w @starter/web`.
 
@@ -37,7 +37,8 @@ apps/
     tsconfig.json
   web/
     src/
-      lib/api.ts        # Typed API client
+      lib/client.ts     # Authenticated API client and public errors
+      lib/adapters.ts   # API/UI field and ID conversion
       App.tsx
       main.tsx
       styles.css
@@ -80,6 +81,8 @@ The seed-only demo caregiver has no login password; create a normal account to u
 - `npm run db:schema`: create the database tables (the database itself must already exist).
 - `npm run db:seed`: add the activity library, default cards, and demo schedules.
 - `npm test -w @starter/api`: run API tests.
+- `npm test -w @starter/web`: run frontend API-client and adapter tests.
+- `npm run test:e2e -w @starter/web`: run connected browser tests against a dedicated empty MySQL test database (see below).
 - `npm start`: run the compiled API after building.
 - `npm run preview -w @starter/web`: preview the frontend build locally (no development API proxy).
 
@@ -133,6 +136,21 @@ Custom cards and settings use parameterized MySQL access. The card schema includ
 ### Adding features
 
 Add API routes under `apps/api/src/routes`, UI components under `apps/web/src/components`, and shared contracts and Zod schemas under `packages/shared/src`. Use shared schemas at API boundaries to validate user input.
+
+### Connected workflows and browser tests
+
+All 26 existing API method/path combinations are used by frontend workflows. `PUT /api/schedules` adds an atomic editor save: new schedule creation, task additions/removals, ordering and timing commit together. The client submits the loaded task ID order as `expectedTaskIds`; changes to task membership/order return 409 rather than overwriting another editor. Existing task completion is preserved. See [the endpoint cross-reference](docs/ENDPOINT_CROSS_REFERENCE.md) for every call site.
+
+Schedule drafts stay in memory until the server confirms a save. Preview is read-only and keeps the editor draft/date. Task status provides immediate add, move, remove, complete and undo operations. Schedule date changes and deletion are explicit saved-data actions. Card administration exposes hide/show/delete for owned custom cards; shared defaults cannot be changed.
+
+Browser tests require `DB_TEST_HOST`, `DB_TEST_PORT`, `DB_TEST_USER`, `DB_TEST_PASSWORD`, and `DB_TEST_NAME` ending in `_test`. Use a dedicated database without users, distinct from normal application/test-suite data. Explicit environment variables override `apps/api/.env.test`. The runner refuses existing users, applies schema/seeds, starts the compiled API on 13001 and Vite on 15173, and cleans up only that run's users and its seed caregiver. It can create a missing test database if the account has permission; otherwise create it first. Never supply a production database.
+
+```sh
+npx playwright install chromium
+npm run test:e2e -w @starter/web
+```
+
+Set `E2E_BROWSER_CHANNEL=chrome` to use an installed Chrome instead. CI installs Chromium and runs both client unit tests and connected browser tests. Coverage includes all 27 method/path combinations, save failure recovery, expired-session handling, reload persistence, a 390px mobile flow, and account isolation. This does not certify every browser, speech voice, or accessibility/performance target.
 
 ## Deployment
 

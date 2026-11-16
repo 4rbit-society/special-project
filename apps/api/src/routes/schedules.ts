@@ -12,12 +12,14 @@ import {
   setScheduleDate,
   tasksForSchedule,
   type Schedule,
+  saveScheduleForUser,
 } from '../db/feature-data.js';
 import {
   createScheduleSchema,
   idParamSchema,
   scheduleQuerySchema,
   updateScheduleSchema,
+  saveScheduleSchema,
 } from '@starter/shared';
 
 export function schedulesRouter(users: UserRepository): Router {
@@ -70,6 +72,14 @@ export function schedulesRouter(users: UserRepository): Router {
       }
       const schedule = await createSchedule(childId, date, source?.id);
       res.status(201).json(await serializeSchedule(schedule));
+    }),
+  );
+
+  router.put(
+    '/',
+    asyncHandler(async (req, res) => {
+      const draft = parse(saveScheduleSchema, req.body);
+      res.json(await saveScheduleForUser(currentUser(req).id, draft));
     }),
   );
 

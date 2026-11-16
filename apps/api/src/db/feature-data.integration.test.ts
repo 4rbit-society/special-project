@@ -442,4 +442,42 @@ describe('MySQL feature route integration', () => {
     await expect(createSchedule(child.id, '2099-12-27')).rejects.toMatchObject({ status: 409 });
     await expect(setScheduleDate(retry, source.schedule_date)).rejects.toMatchObject({ status: 409 });
   });
+
+  it('saves a draft atomically, preserves completion, and rolls back failed reordering', async () => {
+    const data = await import('./feature-data.js');
+    const child = await data.createChildForUser(2, { name: 'Atomic editor fixture', age: 6, delay_domain: 'speech' });
+    const date = '2099-12-16';
+    const initial = await data.saveScheduleForUser(2, { childId: child.id, date, expectedTaskIds: [], tasks: [
+      { activityId: requireFixtureIds().activityId, start_time: '08:00', duration_min: 10 },
+      { name: 'Custom editor task', icon: '⭐', start_time: null, duration_min: null },
+    ] });
+    const first = initial.tasks[0]!;
+    const second = initial.tasks[1]!;
+    const completed = await data.setTaskCompletion(first, true);
+    const draft = { childId: child.id, date, scheduleId: initial.id, expectedTaskIds: [first.id, second.id], tasks: [
+      { id: second.id, start_time: '09:00', duration_min: 20 },
+      { id: first.id, start_time: null, duration_min: null },
+    ] };
+    const pool = getDatabasePool();
+    const connection = await pool.getConnection();
+    const execute = connection.execute;
+    const failure = new Error('Simulated editor write failure');
+    const executeSpy = vi.spyOn(connection, 'execute').mockImplementationOnce((...args) => Reflect.apply(execute, connection, args)).mockRejectedValueOnce(failure);
+    const connectionSpy = vi.spyOn(pool, 'getConnection').mockResolvedValueOnce(connection);
+    try { await expect(data.saveScheduleForUser(2, draft)).rejects.toThrow(failure); }
+    finally { executeSpy.mockRestore(); connectionSpy.mockRestore(); }
+    expect(await data.tasksForSchedule(initial.id)).toMatchObject([
+      { id: first.id, position: 1, start_time: '08:00', status: 'done', completed_at: completed.completed_at },
+      { id: second.id, position: 2, start_time: null },
+    ]);
+    const saved = await data.saveScheduleForUser(2, draft);
+    expect(saved.tasks).toMatchObject([
+      { id: second.id, position: 1, start_time: '09:00' },
+      { id: first.id, position: 2, status: 'done', completed_at: completed.completed_at },
+    ]);
+    await expect(data.saveScheduleForUser(2, draft)).rejects.toMatchObject({ status: 409 });
+    await expect(data.saveScheduleForUser(1, { ...draft, expectedTaskIds: [second.id, first.id] })).rejects.toMatchObject({ status: 404 });
+    await expect(data.saveScheduleForUser(2, { childId: child.id, date: '2099-12-17', expectedTaskIds: [], tasks: [{ activityId: 999999, start_time: null, duration_min: null }] })).rejects.toMatchObject({ status: 400 });
+    expect(await data.findScheduleByChildAndDate(child.id, '2099-12-17')).toBeUndefined();
+  });
 });

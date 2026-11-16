@@ -51,7 +51,7 @@ export interface ApiTask {
   position: number; status: 'pending' | 'done'; completed_at: string | null;
 }
 export interface ApiSchedule {
-  id: number; child_id: number; schedule_date: string; created_at: string; tasks: ApiTask[];
+  id: number; child_id: number; schedule_date: string; created_at: string; tasks: ApiTask[]; revision: string;
 }
 export interface ApiSettings {
   font_size: 'small' | 'medium' | 'large'; contrast: 'normal' | 'high'; sound_on: boolean;

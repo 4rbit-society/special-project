@@ -1,3 +1,4 @@
+import { localDate } from './date';
 import type { Activity, ApiCard, ApiSchedule, ApiSettings, ApiTask, Child, ChildProfileInput, HealthResponse, ProgressSummary, PublicUser, ScheduleDraftInput } from '@starter/shared';
 
 export class ApiError extends Error {
@@ -60,7 +61,7 @@ export class ApiClient {
   createCard = (input: { childId: number; label: string; icon: string; category: ApiCard['category'] }) => this.request<ApiCard>('/cards', 'POST', input);
   hideCard = (id: number, hidden: boolean) => this.request<ApiCard>(`/cards/${id}`, 'PATCH', { hidden });
   deleteCard = (id: number) => this.request<{ success: true }>(`/cards/${id}`, 'DELETE');
-  progress = (childId: number) => this.request<ProgressSummary>(`/progress/${childId}?range=7d`);
+  progress = (childId: number) => this.request<ProgressSummary>(`/progress/${childId}?range=7d&date=${localDate()}`);
   settings = () => this.request<ApiSettings>('/settings');
   updateSettings = (input: ApiSettings) => this.request<ApiSettings>('/settings', 'PUT', input);
 }

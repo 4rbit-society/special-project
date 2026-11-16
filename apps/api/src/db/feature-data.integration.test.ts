@@ -454,7 +454,7 @@ describe('MySQL feature route integration', () => {
     const first = initial.tasks[0]!;
     const second = initial.tasks[1]!;
     const completed = await data.setTaskCompletion(first, true);
-    const draft = { childId: child.id, date, scheduleId: initial.id, expectedTaskIds: [first.id, second.id], tasks: [
+    const draft = { childId: child.id, date, scheduleId: initial.id, expectedRevision: initial.revision, expectedTaskIds: [first.id, second.id], tasks: [
       { id: second.id, start_time: '09:00', duration_min: 20 },
       { id: first.id, start_time: null, duration_min: null },
     ] };
@@ -476,6 +476,9 @@ describe('MySQL feature route integration', () => {
       { id: first.id, position: 2, status: 'done', completed_at: completed.completed_at },
     ]);
     await expect(data.saveScheduleForUser(2, draft)).rejects.toMatchObject({ status: 409 });
+    await data.applyTaskUpdate(saved.tasks[0]!, { duration_min: 45 });
+    await expect(data.saveScheduleForUser(2, { ...draft, expectedTaskIds: saved.tasks.map((task) => task.id), expectedRevision: saved.revision })).rejects.toMatchObject({ status: 409 });
+    expect((await data.tasksForSchedule(initial.id))[0]!.duration_min).toBe(45);
     await expect(data.saveScheduleForUser(1, { ...draft, expectedTaskIds: [second.id, first.id] })).rejects.toMatchObject({ status: 404 });
     await expect(data.saveScheduleForUser(2, { childId: child.id, date: '2099-12-17', expectedTaskIds: [], tasks: [{ activityId: 999999, start_time: null, duration_min: null }] })).rejects.toMatchObject({ status: 400 });
     expect(await data.findScheduleByChildAndDate(child.id, '2099-12-17')).toBeUndefined();

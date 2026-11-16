@@ -18,12 +18,12 @@ export function progressRouter(users: UserRepository): Router {
     '/:childId',
     asyncHandler(async (req, res) => {
       const { id: childId } = parse(idParamSchema, { id: req.params.childId });
-      const { range } = parse(progressQuerySchema, req.query);
+      const { range, date: requestedDate } = parse(progressQuerySchema, req.query);
       if (!(await data.findChildForUser(childId, currentUser(req).id))) {
         throw new HttpError(404, 'Child not found');
       }
 
-      const todayDate = dateString(new Date());
+      const todayDate = requestedDate ?? dateString(new Date());
       const firstDate = new Date(`${todayDate}T00:00:00.000Z`);
       firstDate.setUTCDate(firstDate.getUTCDate() - 6);
       const days = await Promise.all(Array.from({ length: 7 }, async (_, index) => {

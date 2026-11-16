@@ -15,7 +15,7 @@ npm run dev -w @starter/web
 
 Open http://localhost:5173. On PowerShell systems that block `npm.ps1`, use `npm.cmd` instead of `npm`.
 
-The screens now use the authenticated backend for profiles, schedules/tasks, cards, progress and settings. Start MySQL and the API using the setup below before logging in. Register a real account; the old frontend demo data is not imported. Tokens are stored in session storage by default or local storage when Remember me is selected; logout clears both and discards user data. Expired sessions return to login. The communication board uses browser speech synthesis when available. Schedule/progress calendar dates use UTC.
+The screens now use the authenticated backend for profiles, schedules/tasks, cards, progress and settings. Start MySQL and the API using the setup below before logging in. Register a real account; the old frontend demo data is not imported. Tokens are stored in session storage by default or local storage when Remember me is selected; logout clears the current session and discards cached user data, while preserving a newer account session in another tab. Expired sessions return to login. The communication board uses browser speech synthesis when available. Schedule/progress calendar dates use the browser's local day; completion timestamps are stored in UTC.
 
 Verify the frontend with `npm run typecheck -w @starter/web` and `npm run build -w @starter/web`.
 
@@ -80,7 +80,8 @@ The seed-only demo caregiver has no login password; create a normal account to u
 - `npm run build`: compile shared schemas and the API, then build the frontend.
 - `npm run db:schema`: create the database tables (the database itself must already exist).
 - `npm run db:seed`: add the activity library, default cards, and demo schedules.
-- `npm test -w @starter/api`: run API tests.
+- `npm test -w @starter/api`: run isolated API unit tests without using application database credentials.
+- `npm run test:database -w @starter/api`: run database, schema, seed, and user repository tests against a dedicated `*_test` database.
 - `npm test -w @starter/web`: run frontend API-client and adapter tests.
 - `npm run test:e2e -w @starter/web`: run connected browser tests against a dedicated empty MySQL test database (see below).
 - `npm start`: run the compiled API after building.
@@ -96,7 +97,7 @@ API failures expose an `error` string. Malformed JSON, malformed route parameter
 
 ### Child profiles, activities, schedules and tasks
 
-The API persists child, activity, schedule and task data in MySQL. Progress reads those same records. Child, schedule and task queries are scoped to the authenticated user's ID, and deleting a child relies on the schema's foreign-key cascades. Requests use the real JWT middleware. API unit tests use the in-memory mock store only when running under Vitest without database configuration. Task completion timestamps are stored and returned in UTC; progress groups schedules by UTC calendar date. Schedule creation and task copying commit together. See [the backend plan](docs/BACKEND_TASKS.md).
+The API persists child, activity, schedule and task data in MySQL. Progress reads those same records. Child, schedule and task queries are scoped to the authenticated user's ID, and deleting a child relies on the schema's foreign-key cascades. Requests use the real JWT middleware. API unit tests use the in-memory mock store only when running under Vitest without database configuration. Task completion timestamps are stored and returned in UTC; the browser passes its local calendar date to progress (API clients that omit `date` retain the UTC default). Schedule creation and task copying commit together. See [the backend plan](docs/BACKEND_TASKS.md).
 
 | Method and path | Response |
 | --- | --- |
@@ -117,7 +118,7 @@ Example create body:
 
 The current validation choices are: trimmed name (1–100 characters), integer age (0–120), delay domain (`speech`, `motor`, `cognitive`, `social`, `general`), optional notes (up to 2,000 characters, or `null` to clear), and an optional avatar (`🦊`, `🐼`, `🐰`, `🐻`, `🐱`, `🐶`; defaults to `🦊` on create). A partial update preserves omitted fields. Shared TypeScript contracts are in [the shared package](packages/shared/src/index.ts); runtime schemas live in [the shared schemas](packages/shared/src/schemas.ts).
 
-Run API tests with `npm test -w @starter/api`. Database schema, seed and user-repository tests require `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and a dedicated `special_project_test` database; these tests reset that test database. CI runs these files separately from the tests that use mocks.
+Run isolated API unit tests with `npm test -w @starter/api`. Run database schema, seed, connection, and user-repository tests with `npm run test:database -w @starter/api`. Configure `DB_TEST_HOST`, `DB_TEST_PORT`, `DB_TEST_USER`, `DB_TEST_PASSWORD`, and `DB_TEST_NAME` in `apps/api/.env.test` or the shell. Explicit `DB_*` environment variables are also supported for this database-only command. The selected database name must end in `_test`; these tests reset its tables. Unit tests ignore database credentials and never load the normal application `.env`.
 
 For MySQL-backed ownership, persistence, activity-library, progress and child-cascade coverage, configure `DB_TEST_HOST`, `DB_TEST_PORT`, `DB_TEST_USER`, `DB_TEST_PASSWORD`, and `DB_TEST_NAME` (a dedicated, empty database whose name ends in `_test`), then run `npm run test:integration -w @starter/api`. This command builds and launches the compiled API, checks persistence across a process restart, and checks that a failed schedule copy rolls back. The integration suite applies the schema without dropping tables and deletes only its own fixtures. Missing configuration fails the command. CI runs this suite before the database-resetting tests.
 
@@ -155,3 +156,5 @@ Set `E2E_BROWSER_CHANNEL=chrome` to use an installed Chrome instead. CI installs
 ## Deployment
 
 Serve `apps/web/dist` using a static host and run the API with `npm start`. Configure a reverse proxy to forward `/api` to the backend on the same origin. For separate origins, set `VITE_API_BASE_URL` before building the frontend and configure explicit CORS permissions on the API. Vite environment variables are public build-time values; keep secrets in the backend environment.
+
+See [the polish and debugging review](docs/POLISH_REVIEW.md) for the reproduced bugs, fixes, and validation limits.

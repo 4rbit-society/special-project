@@ -7,7 +7,8 @@ import { ApiClient, ApiError } from './lib/client';
 import { activityFromApi, childFromApi, childToApi, draftToApi, emptyData, mergeSchedule, preferencesFromApi, preferencesToApi, scheduleFromApi, taskFromApi } from './lib/adapters';
 import type { AppActions, AppData, DailySchedule, Page, StaffPage } from './model';
 
-const tokenKey = 'araw-session-token-v1';
+import { localDate } from './lib/date';
+import { tokenKey, readToken, clearToken, writeToken, hasTabSession } from './lib/session';
 const base = import.meta.env.VITE_API_BASE_URL ?? '';
 const navItems: { page: StaffPage; label: string; icon: string }[] = [
   { page: 'dashboard', label: 'Dashboard', icon: '/assets/figma-701fc.svg' },
@@ -16,8 +17,6 @@ const navItems: { page: StaffPage; label: string; icon: string }[] = [
   { page: 'progress', label: 'Progress', icon: '/assets/figma-3bc4a.svg' },
   { page: 'settings', label: 'Settings', icon: '/assets/figma-5cefd.svg' },
 ];
-function readToken() { try { return sessionStorage.getItem(tokenKey) ?? localStorage.getItem(tokenKey); } catch { return null; } }
-function clearToken() { try { sessionStorage.removeItem(tokenKey); localStorage.removeItem(tokenKey); } catch { /* Clear the memory session regardless. */ } }
 function pageFromHash(): Page {
   const requested = location.hash.slice(1);
   return ['dashboard', 'profiles', 'schedules', 'tasks', 'progress', 'settings', 'cards', 'child', 'login', 'register'].includes(requested) ? requested as Page : 'dashboard';
@@ -29,18 +28,19 @@ function Brand({ reversed = false }: { reversed?: boolean }) {
 function AuthScreen({ page, onPage, onLogin }: { page: 'login' | 'register'; onPage: (page: Page) => void; onLogin: (token: string, remember: boolean) => void }) {
   const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
   const [role, setRole] = useState<PublicUser['role']>('caregiver'); const [remember, setRemember] = useState(false);
-  const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const register = page === 'register';
+  const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const [registered, setRegistered] = useState(false); const register = page === 'register' && !registered;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (busy) return; setBusy(true); setError('');
     try {
       const api = new ApiClient(null, undefined, base);
-      if (register) await api.register({ name, email, password, role });
+      if (new TextEncoder().encode(password).length > 72) throw new Error('Password must be at most 72 UTF-8 bytes.');
+      if (register) { await api.register({ name, email, password, role }); setRegistered(true); }
       const result = await api.login(email, password); onLogin(result.token, remember);
     } catch (error) { setError(messageOf(error)); } finally { setBusy(false); }
   }
   return <main className="auth-page"><div className="auth-layout">
     <section className="auth-intro"><Brand reversed /><h1>A clear day,<br />one step at a time.</h1><p>Visual schedules and picture cards</p></section>
-    <form className="auth-card" onSubmit={submit}><div className="auth-mobile-logo"><Brand /></div><h2>{register ? 'Create your account' : 'Welcome back'}</h2><p>For caregivers, OTs and SPED teachers.</p>
+    <form className="auth-card" onSubmit={submit}><div className="auth-mobile-logo"><Brand /></div><h2>{register ? 'Create your account' : 'Welcome back'}</h2><p>{registered ? 'Your account was created. Log in to continue.' : 'For caregivers, OTs and SPED teachers.'}</p>
       <fieldset className="workspace-lock" disabled={busy}>
         {register && <label>Name<input required maxLength={100} value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" /></label>}
         <label>Email<input required type="email" maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></label>
@@ -49,7 +49,7 @@ function AuthScreen({ page, onPage, onLogin }: { page: 'login' | 'register'; onP
         <label className="auth-role"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />Remember me on this device</label>
         {error && <div className="auth-error" role="alert">{error}</div>}
         <button className="button button-primary" type="submit">{busy ? 'Please wait…' : register ? 'Create account' : 'Log in'}</button>
-        <button className="button button-outline" type="button" onClick={() => { setError(''); onPage(register ? 'login' : 'register'); }}>{register ? 'Back to log in' : 'Create an account'}</button>
+        <button className="button button-outline" type="button" onClick={() => { setError(''); setRegistered(false); onPage(register ? 'login' : 'register'); }}>{register ? 'Back to log in' : 'Create an account'}</button>
       </fieldset>
     </form></div></main>;
 }
@@ -59,19 +59,23 @@ export function App() {
   const epoch = useRef(0); const busyRef = useRef(false); const cardRevisions = useRef(new Map<number, number>());
   const [data, setData] = useState<AppData>(emptyData); const dataRef = useRef(data); dataRef.current = data;
   const [page, setPage] = useState<Page>(pageFromHash); const [selectedChildId, setSelectedChildId] = useState(0);
+  const pageRef = useRef(page); pageRef.current = page;
+  const leaveGuard = useRef<() => boolean>(() => true);
+  const setNavigationGuard = useCallback((guard: () => boolean) => { leaveGuard.current = guard; return () => { if (leaveGuard.current === guard) leaveGuard.current = () => true; }; }, []);
   const [menuOpen, setMenuOpen] = useState(false); const [busy, setBusy] = useState(false); const [loading, setLoading] = useState(!!token);
   const [message, setMessage] = useState(''); const [loadError, setLoadError] = useState(''); const [retry, setRetry] = useState(0);
-  const [today, setToday] = useState(() => new Date().toISOString().slice(0, 10));
-  function navigate(next: Page) { setPage(next); setMenuOpen(false); location.hash = next; }
+  const [today, setToday] = useState(() => localDate());
+  function navigate(next: Page, confirmed = false) { if (next !== pageRef.current && !confirmed && !leaveGuard.current()) return; pageRef.current = next; setPage(next); setMenuOpen(false); location.hash = next; }
   const logout = useCallback((reason = '') => {
-    epoch.current++; tokenRef.current = null; busyRef.current = false; clearToken(); setToken(null); setData(emptyData()); setSelectedChildId(0); setBusy(false); setLoading(false); setMessage(reason); setPage('login'); location.hash = 'login';
+    if (!reason && !leaveGuard.current()) return;
+    const previous = tokenRef.current; epoch.current++; tokenRef.current = null; busyRef.current = false; clearToken(previous); setToken(null); setData(emptyData()); setSelectedChildId(0); setBusy(false); setLoading(false); setMessage(reason); pageRef.current = 'login'; setPage('login'); location.hash = 'login';
   }, []);
   const api = useMemo(() => new ApiClient(token, () => { if (tokenRef.current === token) logout('Your session expired. Please log in again.'); }, base), [token, logout]);
   useEffect(() => {
-    const hash = () => { setPage(pageFromHash()); };
-    const storage = (event: StorageEvent) => { if (event.key === tokenKey && event.newValue !== tokenRef.current) logout('Your session changed in another tab. Please log in again.'); };
+    const hash = () => { const next = pageFromHash(); if (next !== pageRef.current && !leaveGuard.current()) { history.replaceState(null, '', '#' + pageRef.current); return; } pageRef.current = next; setPage(next); setMenuOpen(false); };
+    const storage = (event: StorageEvent) => { const current = tokenRef.current; if (current && !hasTabSession(current) && (event.key === tokenKey || event.key === null) && readToken() !== current) logout('Your session changed in another tab. Please log in again.'); };
     window.addEventListener('hashchange', hash); window.addEventListener('storage', storage);
-    const timer = setInterval(() => { if (!busyRef.current) setToday(new Date().toISOString().slice(0, 10)); }, 60_000);
+    const timer = setInterval(() => { if (!busyRef.current && pageRef.current !== 'schedules') setToday(localDate()); }, 60_000);
     return () => { clearInterval(timer); window.removeEventListener('hashchange', hash); window.removeEventListener('storage', storage); };
   }, [logout]);
   const fetchSchedule = useCallback(async (childId: number, date: string): Promise<ApiSchedule | null> => {
@@ -129,13 +133,13 @@ export function App() {
     return { ...current, cards: { ...current.cards, [childId]: [...(current.cards[childId] ?? []).filter((item) => item.id !== card.id), card] } };
   }
   const actions: AppActions = {
-    navigate, selectChild: setSelectedChildId, loadSchedule,
-    openChild: (id) => { void (async () => { const ok = await perform(async () => { const [child, schedule, groups] = await Promise.all([api.child(id), fetchSchedule(id, today), api.cards(id)]); return (current) => ({ ...(schedule ? mergeSchedule(current, scheduleFromApi(schedule, current.activities)) : { ...current, schedules: current.schedules.filter((item) => !(item.childId === id && item.date === today)) }), children: current.children.map((item) => item.id === id ? childFromApi(child) : item), cards: { ...current.cards, [id]: Object.values(groups).flat() } }); }); if (ok) { setSelectedChildId(id); navigate('child'); } })(); },
+    navigate, setNavigationGuard, selectChild: (id) => { if (id !== selectedChildId && !leaveGuard.current()) return; setSelectedChildId(id); }, loadSchedule,
+    openChild: (id) => { if (!leaveGuard.current()) return; void (async () => { const ok = await perform(async () => { const [child, schedule, groups] = await Promise.all([api.child(id), fetchSchedule(id, today), api.cards(id)]); return (current) => ({ ...(schedule ? mergeSchedule(current, scheduleFromApi(schedule, current.activities)) : { ...current, schedules: current.schedules.filter((item) => !(item.childId === id && item.date === today)) }), children: current.children.map((item) => item.id === id ? childFromApi(child) : item), cards: { ...current.cards, [id]: Object.values(groups).flat() } }); }); if (ok) { setSelectedChildId(id); navigate('child', true); } })(); },
     addChild: async (input) => { let id = 0; const ok = await perform(async () => { const child = await api.createChild(childToApi(input)); id = child.id; return (current) => ({ ...current, children: [...current.children, childFromApi(child)] }); }); if (ok) { setSelectedChildId(id); refreshProgress(id); } return ok; },
     updateChild: (input) => perform(async () => { const child = await api.updateChild(input.id, childToApi(input)); return (current) => ({ ...current, children: current.children.map((item) => item.id === child.id ? childFromApi(child) : item) }); }),
     deleteChild: async (id) => { const ok = await perform(async () => { await api.deleteChild(id); return (current) => ({ ...current, children: current.children.filter((child) => child.id !== id), schedules: current.schedules.filter((item) => item.childId !== id), cards: Object.fromEntries(Object.entries(current.cards).filter(([key]) => Number(key) !== id)), progress: Object.fromEntries(Object.entries(current.progress).filter(([key]) => Number(key) !== id)) }); }); if (ok && selectedChildId === id) setSelectedChildId(data.children.find((child) => child.id !== id)?.id ?? 0); return ok; },
     updatePreferences: (preferences, name) => perform(async () => { const generation = epoch.current; const user = name === undefined ? data.user : await api.updateProfile(name); if (generation === epoch.current) setData((current) => ({ ...current, user })); try { const settings = await api.updateSettings(preferencesToApi(preferences)); return (current) => ({ ...current, user, preferences: preferencesFromApi(settings) }); } catch (error) { throw new Error(`Profile saved. Preferences could not be saved: ${messageOf(error)}`); } }),
-    updateSchedule: (draft) => refreshAfter(draft.childId, async () => { const saved = await api.saveSchedule(draftToApi(draft, data.schedules.find((item) => item.childId === draft.childId && item.date === draft.date))); return (current) => mergeSchedule(current, scheduleFromApi(saved, current.activities)); }),
+    updateSchedule: async (draft, original) => { let saved: DailySchedule | undefined; const ok = await refreshAfter(draft.childId, async () => { const result = await api.saveSchedule(draftToApi(draft, original)); saved = scheduleFromApi(result, dataRef.current.activities); return (current) => mergeSchedule(current, saved!); }); return ok ? saved : undefined; },
     copySchedule: (childId, date, from) => refreshAfter(childId, async () => { const saved = await api.createSchedule(childId, date, from); return (current) => mergeSchedule(current, scheduleFromApi(saved, current.activities)); }),
     moveSchedule: (schedule, date) => refreshAfter(schedule.childId, async () => { const moved = await api.moveSchedule(Number(schedule.id), date); return (current) => mergeSchedule({ ...current, schedules: current.schedules.filter((item) => item.id !== schedule.id) }, scheduleFromApi(moved, current.activities)); }),
     deleteSchedule: (schedule) => refreshAfter(schedule.childId, async () => { await api.deleteSchedule(Number(schedule.id)); return (current) => ({ ...current, schedules: current.schedules.filter((item) => item.id !== schedule.id) }); }),
@@ -149,7 +153,7 @@ export function App() {
   };
   const rootClass = `app-root font-${data.preferences.fontSize} contrast-${data.preferences.contrast}`;
   const banner = message && <div className="auth-error" role="alert"><p>{message}</p><button className="button button-outline" onClick={() => setMessage('')}>Dismiss</button><button className="button button-outline" onClick={() => { if (window.confirm('Reload saved data? Unsaved drafts will be discarded.')) { setMessage(''); setRetry((value) => value + 1); } }}>Reload saved data</button></div>;
-  if (!token || page === 'login' || page === 'register') return <div className={rootClass}>{banner}<AuthScreen key={page} page={page === 'register' ? 'register' : 'login'} onPage={navigate} onLogin={(value, remember) => { epoch.current++; tokenRef.current = value; setLoading(true); clearToken(); try { (remember ? localStorage : sessionStorage).setItem(tokenKey, value); } catch { setMessage('Signed in for this tab only. Browser storage is unavailable.'); } setData(emptyData()); setToken(value); navigate('dashboard'); }} /></div>;
+  if (!token || page === 'login' || page === 'register') return <div className={rootClass}>{banner}<AuthScreen key={page} page={page === 'register' ? 'register' : 'login'} onPage={navigate} onLogin={(value, remember) => { const previous = tokenRef.current; epoch.current++; tokenRef.current = value; setLoading(true); if (!writeToken(value, remember, previous)) setMessage('Signed in for this tab only. Browser storage is unavailable.'); setData(emptyData()); setToken(value); navigate('dashboard'); }} /></div>;
   if (loading || loadError || !data.user) return <main className={rootClass} aria-busy={loading}><div className="staff-main"><Brand /><p role={loadError ? 'alert' : 'status'}>{loadError || 'Loading your workspace…'}</p>{!loading && <button className="button button-primary" onClick={() => setRetry((value) => value + 1)}>Retry</button>}<button className="button button-outline" onClick={() => logout()}>Log out</button></div></main>;
   const content = page === 'child' ? <ChildView data={data} selectedChildId={selectedChildId} today={today} actions={actions} /> : <>
     <header className="staff-header"><Brand /><span className="staff-workspace-label">Staff workspace</span><div className="staff-account"><span>{data.user.name}</span><span>{data.user.role === 'caregiver' ? 'Caregiver' : data.user.role === 'ot' ? 'OT' : 'SPED Teacher'}</span></div><button className="button button-outline staff-logout" onClick={() => logout()}>Log out</button><button className="button button-outline staff-menu-button" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? 'Close' : 'Menu'}</button></header>

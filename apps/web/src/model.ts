@@ -29,6 +29,7 @@ export interface DailySchedule {
   childId: number;
   date: string;
   tasks: ScheduleTask[];
+  revision?: string;
 }
 
 export interface Preferences {
@@ -55,7 +56,8 @@ export interface AppActions {
   updateChild: (child: ChildProfile) => Promise<boolean>;
   deleteChild: (id: number) => Promise<boolean>;
   updatePreferences: (preferences: Preferences, name?: string) => Promise<boolean>;
-  updateSchedule: (schedule: DailySchedule) => Promise<boolean>;
+  updateSchedule: (schedule: DailySchedule, base?: DailySchedule) => Promise<DailySchedule | undefined>;
+  setNavigationGuard: (guard: () => boolean) => () => void;
   markTask: (childId: number, taskId: string, done: boolean, date?: string) => Promise<boolean>;
   loadSchedule: (childId: number, date: string) => Promise<DailySchedule | null | undefined>;
   copySchedule: (childId: number, date: string, from: string) => Promise<boolean>;

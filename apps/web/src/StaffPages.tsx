@@ -120,7 +120,7 @@ function Profiles({ data, today, actions, formChild, formOpen, deleteChild, onEd
 function Progress({ data, selectedChildId, actions }: Props) {
   const childId = data.children.some((child) => child.id === selectedChildId) ? selectedChildId : (data.children[0]?.id ?? 0);
   const progress = data.progress[childId];
-  return <div className="staff-page staff-progress-page"><h1>Progress</h1><p>Completion history from your saved schedules. Dates use UTC.</p>
+  return <div className="staff-page staff-progress-page"><h1>Progress</h1><p>Completion history from your saved schedules. Completion times use your local time.</p>
     <label className="staff-field">Child<select value={childId} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((child) => <option key={child.id} value={child.id}>{child.name}</option>)}</select></label>
     <div className="staff-panel">{progress ? <WeekView data={data} childId={childId} today={progress.today.date} /> : <p>Add a child to view progress.</p>}</div>
     <section className="staff-panel"><h2>Recent completions</h2>{progress?.recent_completions.length ? progress.recent_completions.map((task) => <p key={task.task_id}>{task.name} · <time dateTime={task.completed_at}>{new Date(task.completed_at).toLocaleString()}</time></p>) : <p>No completed activities yet.</p>}</section>

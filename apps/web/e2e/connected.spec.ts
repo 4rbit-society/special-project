@@ -73,7 +73,7 @@ test('all mounted endpoints support a persisted browser workflow', async ({ page
   await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Updated Caregiver');
   await expect(page.getByRole('radio', { name: /Large/ })).toBeChecked();
   await page.getByRole('button', { name: 'Schedules', exact: true }).click();
-  const sourceDate = new Date().toISOString().slice(0, 10);
+  const sourceDate = await page.getByLabel('Date', { exact: true }).inputValue();
   await page.getByLabel('Date', { exact: true }).fill('2099-12-20');
   await page.getByRole('button', { name: 'Copy from date', exact: true }).first().click();
   await page.getByRole('dialog').getByLabel('Source date').fill(sourceDate);
@@ -155,3 +155,123 @@ test('a failed save keeps the editor draft until the server confirms a retry', a
   await page.getByRole('button', { name: 'Save schedule', exact: true }).first().click();
   await expect(page.getByText('Schedule saved', { exact: true })).toBeVisible();
 });
+
+async function openEditor(page: Page) {
+  await register(page);
+  await page.getByRole('button', { name: 'Add your first child' }).click();
+  await page.getByLabel('Name or nickname').fill('Debug Child');
+  await page.getByRole('button', { name: 'Save child', exact: true }).click();
+  await page.getByRole('button', { name: 'Create schedule', exact: true }).click();
+  await page.locator('.schedule-library-item').filter({ hasText: 'Play' }).getByRole('button', { name: 'Add', exact: true }).click();
+}
+
+test('timing saves directly, protects drafts, and safely handles an empty date', async ({ page }) => {
+  await openEditor(page);
+  const errors: string[] = []; page.on('pageerror', (error) => errors.push(error.message));
+  const date = await page.getByLabel('Date', { exact: true }).inputValue();
+  await page.getByLabel('Start time (optional)').fill('09:15');
+  await page.getByLabel('Duration (minutes)').fill('25');
+  page.once('dialog', (dialog) => { void dialog.dismiss(); });
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
+  await expect(page.getByLabel('Duration (minutes)')).toHaveValue('25');
+  await page.getByLabel('Date', { exact: true }).fill('');
+  await expect(page.getByLabel('Date', { exact: true })).toHaveValue(date);
+  await page.getByRole('button', { name: 'Save schedule', exact: true }).first().click();
+  await expect(page.getByText('Schedule saved', { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.locator('.schedule-task')).toContainText('09:15');
+  await expect(page.locator('.schedule-task')).toContainText('25 min');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole('button', { name: 'Change date', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Delete schedule', exact: true })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('modal traps keyboard focus and Escape restores its opener', async ({ page }) => {
+  await openEditor(page);
+  await page.getByRole('button', { name: 'Custom activity', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  for (let i = 0; i < 9; i++) {
+    await page.keyboard.press('Tab');
+    expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+  }
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Custom activity', exact: true })).toBeFocused();
+});
+
+test('registration retries login without creating the account twice', async ({ page }) => {
+  let attempts = 0;
+  await page.route('**/api/auth/login', (route) => ++attempts === 1 ? route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"Try login again"}' }) : route.continue());
+  await page.goto('/#register');
+  await page.getByLabel('Name', { exact: true }).fill('Retry Caregiver');
+  await page.getByLabel('Email', { exact: true }).fill(email());
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Create account', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Try login again');
+  await page.getByRole('button', { name: 'Log in', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Welcome to Araw', exact: true })).toBeVisible();
+  expect(attempts).toBe(2);
+});
+
+test('a remembered login in another tab does not sign out a tab-only session', async ({ page, context }) => {
+  await register(page);
+  const first = await page.evaluate(() => sessionStorage.getItem('araw-session-token-v1'));
+  const other = await context.newPage();
+  await other.goto('/#register');
+  await other.getByLabel('Name', { exact: true }).fill('Other Caregiver');
+  await other.getByLabel('Email', { exact: true }).fill(email());
+  await other.getByLabel('Password', { exact: true }).fill(password);
+  await other.getByLabel('Remember me on this device').check();
+  await other.getByRole('button', { name: 'Create account', exact: true }).click();
+  await expect(other.getByRole('heading', { name: 'Welcome to Araw', exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Welcome to Araw', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => sessionStorage.getItem('araw-session-token-v1'))).toBe(first);
+  expect(await other.evaluate(() => localStorage.getItem('araw-session-token-v1'))).toBeTruthy();
+});
+
+test('stale timing conflicts retain the editor draft and the newer server timing', async ({ page }) => {
+  await openEditor(page);
+  await page.getByRole('button', { name: 'Save schedule', exact: true }).first().click();
+  await expect(page.getByText('Schedule saved', { exact: true })).toBeVisible();
+  const token = await page.evaluate(() => sessionStorage.getItem('araw-session-token-v1'));
+  const headers = { Authorization: `Bearer ${token}` };
+  const children = await (await page.request.get('/api/children', { headers })).json();
+  const date = await page.getByLabel('Date', { exact: true }).inputValue();
+  const schedule = await (await page.request.get(`/api/schedules?childId=${children[0].id}&date=${date}`, { headers })).json();
+  expect((await page.request.put(`/api/tasks/${schedule.tasks[0].id}`, { headers, data: { duration_min: 40 } })).ok()).toBe(true);
+  await page.locator('.schedule-task').getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByLabel('Duration (minutes)').fill('15');
+  await page.getByRole('button', { name: 'Save schedule', exact: true }).first().click();
+  await expect(page.getByRole('alert')).toContainText('This schedule changed');
+  await expect(page.getByLabel('Duration (minutes)')).toHaveValue('15');
+  const current = await (await page.request.get(`/api/schedules?childId=${children[0].id}&date=${date}`, { headers })).json();
+  expect(current.tasks[0].duration_min).toBe(40);
+});
+
+for (const mode of ['throw', 'async'] as const) {
+  test(`speech ${mode} failure keeps words visible and reports unavailable voice`, async ({ page }) => {
+    await page.addInitScript((mode) => {
+      class Utterance { text: string; rate = 1; onerror?: (event: { error: string }) => void; constructor(text: string) { this.text = text; } }
+      Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, value: Utterance });
+      Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: {
+        cancel() {},
+        speak(utterance: Utterance) { if (mode === 'throw') throw new Error('Voice engine unavailable'); setTimeout(() => utterance.onerror?.({ error: 'synthesis-failed' }), 0); },
+      } });
+    }, mode);
+    await register(page);
+    await page.getByRole('button', { name: 'Add your first child' }).click();
+    await page.getByLabel('Name or nickname').fill('Speech Child');
+    await page.getByRole('button', { name: 'Save child', exact: true }).click();
+    await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
+    await page.getByRole('button', { name: 'Open Child view', exact: true }).click();
+    await page.getByRole('button', { name: 'Talk', exact: true }).click();
+    const card = page.locator('.child-picture-card').first();
+    const label = await card.locator('strong').innerText();
+    await card.click();
+    await expect(page.locator('.child-voice-status')).toContainText('available');
+    await expect(page.getByRole('region', { name: 'My words', exact: true })).toContainText(label.toLowerCase());
+  });
+}

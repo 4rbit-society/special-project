@@ -40,20 +40,20 @@ Groups run in dependency order: **1 → 2 → 3 → 4 → 5**. Tasks within a gr
 
 ## Group 3 — Child profiles & activity library (CHILD)
 
-> **Status note:** Group 3 is implemented against the same temporary mocks as Group 4. Group 1's database foundation is available, but feature routes still use in-memory data and mock auth while Group 2 is pending. Children and activities share one data source with schedules/tasks. Bearer tokens are mock user ids. Ownership is enforced inside child data access, including updates and deletes; runtime validation lives in `packages/shared`. Replace the mock auth and data imports with JWT/MySQL during integration. Mock users/children are separate from database seed records. Tasks 3.4 and 3.6 remain open for the real database/custom-card cascade check; the API delete and mock schedule/task cascades already work and are tested.
+> **Status note:** Child, activity, schedule and task routes use parameterized MySQL access. Child deletion relies on the schema's schedule/task/custom-card foreign-key cascades, and ownership checks follow child ownership. The temporary Bearer-ID authentication fixtures remain until Group 2 delivers JWT auth. Vitest uses the mock store only when no database is configured; the dedicated MySQL integration test passed against a separate empty test database, including restart persistence, user isolation and cascades.
 
-- [x] **3.1 Child data access** — ownership-scoped queries: every read/write filters by the authenticated `user_id` *(mock implementation; parameterized SQL deferred to integration)*. (FR-CHILD-06, §7.3)
+- [x] **3.1 Child data access** — ownership-scoped parameterized SQL: every read/write filters by the authenticated `user_id`. (FR-CHILD-06, §7.3)
 - [x] **3.2 List & create** — `GET /api/children` (own only); `POST /api/children` with name, age, delay_domain, optional notes, predefined avatar. (FR-CHILD-01/02/05)
 - [x] **3.3 Read & update** — `GET, PUT /api/children/:id` with ownership checks; another user's child returns 404. (FR-CHILD-03/06)
-- [ ] **3.4 Delete with cascade** — `DELETE /api/children/:id`; FK cascades remove schedules, tasks and custom cards *(mock delete and schedule/task cascades implemented; MySQL/custom-card cascade deferred)*. (FR-CHILD-04)
+- [x] **3.4 Delete with cascade** — `DELETE /api/children/:id`; MySQL integration test verifies FK cascades remove schedules, tasks and custom cards. (FR-CHILD-04)
 - [x] **3.5 Activity library endpoint** — `GET /api/activities` serving the seeded library. (FR-SCH-01)
-- [ ] **3.6 Isolation tests** — user B cannot list, read, edit or delete user A's children; cascade delete verified *(isolation and mock schedule/task cascades covered; MySQL/custom-card cascade is an explicit `todo` test)*. (NFR-SEC-06)
+- [x] **3.6 Isolation tests** — MySQL integration test verifies user B cannot list, read, edit or delete user A's children or access descendants; foreign-owned records and shared default cards survive child cascade deletion. (NFR-SEC-06)
 
 **Group exit criteria:** full child CRUD works through the API with data isolation proven by tests.
 
 ## Group 4 — Schedules & tasks (SCH + TASK)
 
-> **Status note:** Group 4 runs on temporary mocks in `apps/api/src/mocks/`, shared with Group 3 (Bearer token = mock user id; in-memory children/activities/schedules/tasks). Group 1 provides the database foundation; swap in real JWT `requireAuth` and MySQL data access during integration after Group 2 lands. Preserve route behavior and validation while adapting tests to real auth/database fixtures. The 4.7 restart-persistence check is a `todo` test until feature routes use the database.
+> **Status note:** Schedule and task routes use MySQL; Bearer IDs are still development fixtures until Group 2 JWT auth is implemented. The MySQL integration suite creates records through a running API process, restarts that process, checks persisted completion, and verifies child FK cascades; the live integration run passed.
 
 - [x] **4.1 Schedule read** — `GET /api/schedules?childId=&date=` returning the schedule with tasks ordered by `position`; ownership via the child. (FR-SCH-02, FR-TASK-05)
 - [x] **4.2 Schedule create & copy** — `POST /api/schedules` for child + date (409 on duplicate date); optional `copyFrom` date duplicates that day's tasks. (FR-SCH-02/09)
@@ -61,7 +61,7 @@ Groups run in dependency order: **1 → 2 → 3 → 4 → 5**. Tasks within a gr
 - [x] **4.4 Task add & edit** — `POST /api/tasks` (library activity or custom name + predefined icon, FR-SCH-08); `PUT /api/tasks/:id` for optional `start_time` (HH:MM), `duration_min`, and `position` reordering. (FR-SCH-04/05)
 - [x] **4.5 Task remove** — `DELETE /api/tasks/:id` with ownership through the schedule's child. (FR-SCH-06)
 - [x] **4.6 Complete & undo** — `PATCH /api/tasks/:id/complete`: set `done` + `completed_at` timestamp; undo returns to `pending` and clears it. (FR-TASK-01–04)
-- [x] **4.7 Schedule/task tests** — create → add → reorder → complete → undo flow; duplicate-date 409; cross-user access rejected; state survives a server restart *(restart check deferred — see note)*. (NFR-REL-01, NFR-SEC-06)
+- [x] **4.7 Schedule/task tests** — unit tests cover create → add → reorder → complete → undo and duplicate-date handling; MySQL integration coverage verifies persistence across server restart and cross-user access rejection. (NFR-REL-01, NFR-SEC-06)
 
 **Group exit criteria:** the full schedule/task lifecycle works via API, ordered and timestamped, with ownership enforced at every step.
 

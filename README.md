@@ -67,9 +67,9 @@ The seed-only demo caregiver has no login password; create a normal account to u
 
 ## Extend the template
 
-### Child profiles and activity library (temporary mocks)
+### Child profiles, activities, schedules and tasks
 
-Group 3 currently shares the in-memory data and mock authentication used by schedules/tasks. Use `Authorization: Bearer 1` for Alice (children Mia and Leo) or `Authorization: Bearer 2` for Bob (child Ava). These tokens are development fixtures, not JWTs. All changes reset when the server restarts. Group 1 provides the database foundation; these feature routes still need MySQL integration, JWT authentication from Group 2, and custom-card cascade verification. The mock users/children are separate from MySQL seed records. See [the backend plan](docs/BACKEND_TASKS.md).
+The API persists child, activity, schedule and task data in MySQL. Child, schedule and task queries are scoped to the authenticated user's ID, and deleting a child relies on the schema's foreign-key cascades. The current Bearer IDs (`1` for Alice and `2` for Bob) are temporary development authentication fixtures, not JWTs; replace them with Group 2 authentication before production. API unit tests use the in-memory mock store only when running under Vitest without database configuration. See [the backend plan](docs/BACKEND_TASKS.md).
 
 | Method and path | Response |
 | --- | --- |
@@ -90,7 +90,9 @@ Example create body:
 
 The current validation choices are: trimmed name (1–100 characters), integer age (0–120), delay domain (`speech`, `motor`, `cognitive`, `social`, `general`), optional notes (up to 2,000 characters, or `null` to clear), and an optional avatar (`🦊`, `🐼`, `🐰`, `🐻`, `🐱`, `🐶`; defaults to `🦊` on create). A partial update preserves omitted fields. Shared TypeScript contracts are in [the shared package](packages/shared/src/index.ts); runtime schemas live in [the shared schemas](packages/shared/src/schemas.ts).
 
-Run API tests with `npm run test -w @starter/api`. The suite covers child CRUD, validation, cross-user isolation, actual mock schedule/task removal, and use of newly created children and library activities in schedules. The MySQL/custom-card cascade and restart persistence checks are explicitly deferred.
+Run unit tests with `npm run test -w @starter/api`. For MySQL-backed ownership, persistence, activity-library and child-cascade coverage, configure `DB_TEST_HOST`, `DB_TEST_PORT`, `DB_TEST_USER`, `DB_TEST_PASSWORD`, and `DB_TEST_NAME` (a dedicated, empty database whose name ends in `_test`), then run `npm run test:integration -w @starter/api`. The integration test applies the schema without dropping tables and deletes only its own fixtures.
+
+For local integration testing, put those `DB_TEST_*` values in `apps/api/.env.test` (this file is git-ignored). Create the database first; the test account needs privileges only on that database and the database must not contain any users. Do not copy production credentials or seed production data into the test database.
 
 ### Adding features
 

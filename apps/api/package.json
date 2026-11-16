@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "db:schema": "tsx scripts/schema.ts",
     "db:seed": "tsx scripts/seed.ts",
+    "test:integration": "vitest run src/db/feature-data.integration.test.ts",
     "pretest": "npm run build -w @starter/shared",
     "test": "vitest run",
     "start": "node dist/server.js"

@@ -252,7 +252,4 @@ describe('schedule/task lifecycle', () => {
       .query({ childId: 1, date: DATE });
     expect(final.body.tasks.every((t: { status: string }) => t.status === 'pending')).toBe(true);
   });
-
-  // Requires the real MySQL persistence layer (Group 1); the mock store is in-memory.
-  it.todo('state survives a server restart');
 });

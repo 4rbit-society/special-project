@@ -183,6 +183,4 @@ describe('child deletion and schedule integration', () => {
     expect((await request(app).get('/api/children/1').set(alice)).status).toBe(404);
     expect((await request(app).delete('/api/children/1').set(alice)).status).toBe(404);
   });
-
-  it.todo('verifies MySQL foreign-key cascades to schedules, tasks and custom picture cards');
 });

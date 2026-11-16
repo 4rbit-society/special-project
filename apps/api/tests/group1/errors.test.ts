@@ -3,6 +3,9 @@ import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 import { app } from '../../src/app.js';
 import { asyncHandler, errorHandler, HttpError } from '../../src/lib/errors.js';
+import { createTestApp } from '../../src/testing/testApp.js';
+
+const { app: authenticatedApp, alice } = await createTestApp();
 
 function appThrowing(error: unknown) {
   const probe = express();
@@ -60,5 +63,34 @@ describe('1.4 uniform error handling', () => {
       .send({ childId: 1, date: '2026-11-14', padding: 'x'.repeat(150_000) });
     expect(res.status).toBe(400);
     expect(res.body.error).toBeTruthy();
+  });
+
+  it('rejects malformed route parameter encoding with 400', async () => {
+    const res = await request(authenticatedApp)
+      .get('/api/children/%E0%A4%A')
+      .set(alice);
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Invalid URL parameter encoding' });
+  });
+
+  it('rejects unsupported JSON charsets with 400', async () => {
+    const res = await request(authenticatedApp)
+      .post('/api/children')
+      .set(alice)
+      .set('Content-Type', 'application/json; charset=iso-8859-1')
+      .send('{}');
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Unsupported JSON charset' });
+  });
+
+  it('does not classify unexpected URI errors as client errors', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const res = await request(appThrowing(new URIError('secret internals'))).get('/boom');
+      expect(res.status).toBe(500);
+      expect(res.body).toEqual({ error: 'Internal server error' });
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

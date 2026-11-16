@@ -32,6 +32,7 @@ function getPool(): Pool {
       database: requiredEnvironmentVariable('DB_NAME'),
       waitForConnections: true,
       connectionLimit: 10,
+      dateStrings: true,
     });
   }
 

@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit",
     "db:schema": "tsx scripts/schema.ts",
     "db:seed": "tsx scripts/seed.ts",
+    "pretest:integration": "npm run build -w @starter/shared && npm run build",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "pretest": "npm run build -w @starter/shared",
     "test": "vitest run",
     "start": "node dist/server.js"

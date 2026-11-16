@@ -3,7 +3,7 @@ import type { UserRepository } from '../users/userRepository.js';
 import { asyncHandler, HttpError } from '../lib/errors.js';
 import { parse } from '../lib/validate.js';
 import { currentUser, requireAuth } from '../middleware/requireAuth.js';
-import * as data from '../mocks/data.js';
+import * as data from '../db/feature-data.js';
 import { idParamSchema, progressQuerySchema } from '@starter/shared';
 
 export function progressRouter(users: UserRepository): Router {
@@ -19,19 +19,19 @@ export function progressRouter(users: UserRepository): Router {
     asyncHandler(async (req, res) => {
       const { id: childId } = parse(idParamSchema, { id: req.params.childId });
       const { range } = parse(progressQuerySchema, req.query);
-      if (!data.findChildForUser(childId, currentUser(req).id)) {
+      if (!(await data.findChildForUser(childId, currentUser(req).id))) {
         throw new HttpError(404, 'Child not found');
       }
 
       const todayDate = dateString(new Date());
       const firstDate = new Date(`${todayDate}T00:00:00.000Z`);
       firstDate.setUTCDate(firstDate.getUTCDate() - 6);
-      const days = Array.from({ length: 7 }, (_, index) => {
+      const days = await Promise.all(Array.from({ length: 7 }, async (_, index) => {
         const current = new Date(firstDate);
         current.setUTCDate(firstDate.getUTCDate() + index);
         const date = dateString(current);
-        const schedule = data.findScheduleByChildAndDate(childId, date);
-        const tasks = schedule ? data.tasksForSchedule(schedule.id) : [];
+        const schedule = await data.findScheduleByChildAndDate(childId, date);
+        const tasks = schedule ? await data.tasksForSchedule(schedule.id) : [];
         const done = tasks.filter((task) => task.status === 'done').length;
         return {
           date,
@@ -40,7 +40,7 @@ export function progressRouter(users: UserRepository): Router {
           percentage: tasks.length === 0 ? 0 : Math.round((done / tasks.length) * 100),
           tasks,
         };
-      });
+      }));
 
       const startTimestamp = firstDate.getTime();
       const nowTimestamp = Date.now();

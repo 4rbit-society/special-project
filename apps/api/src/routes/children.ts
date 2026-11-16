@@ -3,7 +3,13 @@ import type { UserRepository } from '../users/userRepository.js';
 import { asyncHandler, HttpError } from '../lib/errors.js';
 import { parse } from '../lib/validate.js';
 import { currentUser, requireAuth } from '../middleware/requireAuth.js';
-import * as data from '../mocks/data.js';
+import {
+  createChildForUser,
+  deleteChildForUser,
+  findChildForUser,
+  listChildrenForUser,
+  updateChildForUser,
+} from '../db/feature-data.js';
 import { createChildSchema, idParamSchema, updateChildSchema } from '@starter/shared';
 
 export function childrenRouter(users: UserRepository): Router {
@@ -13,7 +19,7 @@ export function childrenRouter(users: UserRepository): Router {
   router.get(
     '/',
     asyncHandler(async (req, res) => {
-      res.json(data.listChildrenForUser(currentUser(req).id));
+      res.json(await listChildrenForUser(currentUser(req).id));
     }),
   );
 
@@ -21,7 +27,7 @@ export function childrenRouter(users: UserRepository): Router {
     '/',
     asyncHandler(async (req, res) => {
       const input = parse(createChildSchema, req.body);
-      const child = data.createChildForUser(currentUser(req).id, input);
+      const child = await createChildForUser(currentUser(req).id, input);
       res.status(201).json(child);
     }),
   );
@@ -30,7 +36,7 @@ export function childrenRouter(users: UserRepository): Router {
     '/:id',
     asyncHandler(async (req, res) => {
       const { id } = parse(idParamSchema, req.params);
-      const child = data.findChildForUser(id, currentUser(req).id);
+      const child = await findChildForUser(id, currentUser(req).id);
       if (!child) throw new HttpError(404, 'Child not found');
       res.json(child);
     }),
@@ -41,7 +47,7 @@ export function childrenRouter(users: UserRepository): Router {
     asyncHandler(async (req, res) => {
       const { id } = parse(idParamSchema, req.params);
       const patch = parse(updateChildSchema, req.body);
-      const child = data.updateChildForUser(id, currentUser(req).id, patch);
+      const child = await updateChildForUser(id, currentUser(req).id, patch);
       if (!child) throw new HttpError(404, 'Child not found');
       res.json(child);
     }),
@@ -51,7 +57,7 @@ export function childrenRouter(users: UserRepository): Router {
     '/:id',
     asyncHandler(async (req, res) => {
       const { id } = parse(idParamSchema, req.params);
-      if (!data.deleteChildForUser(id, currentUser(req).id)) {
+      if (!(await deleteChildForUser(id, currentUser(req).id))) {
         throw new HttpError(404, 'Child not found');
       }
       res.json({ success: true });

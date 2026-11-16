@@ -1,11 +1,16 @@
 export * from './schemas.js';
 
-export interface HealthResponse {
-  status: 'ok' | 'error';
-  database: 'connected' | 'disconnected';
+export type HealthResponse = {
+  status: 'ok';
+  database: 'connected';
   message: string;
   timestamp: string;
-}
+} | {
+  status: 'error';
+  database: 'disconnected';
+  error: string;
+  timestamp: string;
+};
 
 export type DelayDomain = 'speech' | 'motor' | 'cognitive' | 'social' | 'general';
 

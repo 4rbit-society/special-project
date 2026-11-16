@@ -83,11 +83,17 @@ The seed-only demo caregiver has no login password; create a normal account to u
 - `npm start`: run the compiled API after building.
 - `npm run preview -w @starter/web`: preview the frontend build locally (no development API proxy).
 
+Rerunning the seed adds missing sample records without overwriting existing task edits or completion state.
+
+`GET /api/health` returns `200` with `{ status: "ok", database: "connected", message, timestamp }` when MySQL is reachable. It returns `503` with `{ status: "error", database: "disconnected", error: "Database unavailable.", timestamp }` when unavailable. Database details are logged server-side and omitted from the public failure body.
+
+API failures expose an `error` string. Malformed JSON, malformed route parameter encoding, unsupported JSON charsets, and oversized request bodies return `400`; unexpected server failures retain a generic `500` response.
+
 ## Extend the template
 
-### Child profiles, activity library, schedules, tasks, and progress (temporary mocks)
+### Child profiles, activities, schedules and tasks
 
-Children, activities, schedules, tasks, and progress currently use in-memory data. The authenticated user comes from the real JWT middleware; child fixtures use user IDs 1 and 2, matching the test accounts. These feature data changes reset when the process restarts. See [the backend plan](docs/BACKEND_TASKS.md).
+The API persists child, activity, schedule and task data in MySQL. Progress reads those same records. Child, schedule and task queries are scoped to the authenticated user's ID, and deleting a child relies on the schema's foreign-key cascades. Requests use the real JWT middleware. API unit tests use the in-memory mock store only when running under Vitest without database configuration. Task completion timestamps are stored and returned in UTC; progress groups schedules by UTC calendar date. Schedule creation and task copying commit together. See [the backend plan](docs/BACKEND_TASKS.md).
 
 | Method and path | Response |
 | --- | --- |
@@ -95,7 +101,7 @@ Children, activities, schedules, tasks, and progress currently use in-memory dat
 | `POST /api/children` | `201`, created child |
 | `GET /api/children/:id` | `200`, owned child |
 | `PUT /api/children/:id` | `200`, updated child; accepts a nonempty partial update |
-| `DELETE /api/children/:id` | `200`, `{ "success": true }`; removes mock schedules and their tasks |
+| `DELETE /api/children/:id` | `200`, `{ "success": true }`; removes the child's schedules and tasks through database cascades |
 | `GET /api/activities` | `200`, array of shared activities with `id`, `name`, `icon`, `category` |
 
 All child and activity endpoints require a valid JWT. Missing/invalid tokens return `401`; invalid input returns `400`; missing or another user's child returns the same `404`. Errors use `{ "error": "message" }`. Ownership comes from authentication; client-supplied ids, ownership and timestamps are rejected in child bodies. Deletion confirmation belongs in the frontend.
@@ -108,7 +114,11 @@ Example create body:
 
 The current validation choices are: trimmed name (1–100 characters), integer age (0–120), delay domain (`speech`, `motor`, `cognitive`, `social`, `general`), optional notes (up to 2,000 characters, or `null` to clear), and an optional avatar (`🦊`, `🐼`, `🐰`, `🐻`, `🐱`, `🐶`; defaults to `🦊` on create). A partial update preserves omitted fields. Shared TypeScript contracts are in [the shared package](packages/shared/src/index.ts); runtime schemas live in [the shared schemas](packages/shared/src/schemas.ts).
 
-Run API tests with `npm test -w @starter/api`. The suite covers child CRUD, validation, cross-user isolation, actual mock schedule/task removal, and use of newly created children and library activities in schedules. MySQL child/custom-card cascade and restart-persistence integration tests are explicitly deferred.
+Run API tests with `npm test -w @starter/api`. Database schema, seed and user-repository tests require `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and a dedicated `special_project_test` database; these tests reset that test database. CI runs these files separately from the tests that use mocks.
+
+For MySQL-backed ownership, persistence, activity-library, progress and child-cascade coverage, configure `DB_TEST_HOST`, `DB_TEST_PORT`, `DB_TEST_USER`, `DB_TEST_PASSWORD`, and `DB_TEST_NAME` (a dedicated, empty database whose name ends in `_test`), then run `npm run test:integration -w @starter/api`. This command builds and launches the compiled API, checks persistence across a process restart, and checks that a failed schedule copy rolls back. The integration suite applies the schema without dropping tables and deletes only its own fixtures. Missing configuration fails the command. CI runs this suite before the database-resetting tests.
+
+For local integration testing, put those `DB_TEST_*` values in `apps/api/.env.test` (this file is git-ignored). Explicit environment variables take precedence over that file. Create the database first; the test account needs privileges only on that database and the database must not contain any users. Do not copy production credentials or seed production data into the test database.
 
 ### Cards, settings, and profile
 
@@ -118,7 +128,7 @@ Run API tests with `npm test -w @starter/api`. The suite covers child CRUD, vali
 - `GET /api/settings` returns defaults or the authenticated user's settings; `PUT /api/settings` updates them.
 - `GET /api/auth/me` returns the current profile; `PATCH /api/auth/me` updates only its name.
 
-Custom cards and settings use parameterized MySQL access. The card schema includes an `is_hidden` flag; re-run `npm run db:schema` after updating an existing local database. Progress is based on the current in-memory schedule/task data until Group 4 persistence is implemented. API tests inject in-memory repositories and do not exercise MySQL setup or persistence.
+Custom cards and settings use parameterized MySQL access. The card schema includes an `is_hidden` flag; re-run `npm run db:schema` after updating an existing local database. Unit tests inject in-memory repositories; the dedicated integration test covers MySQL route persistence.
 
 ### Adding features
 

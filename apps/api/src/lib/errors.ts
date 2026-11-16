@@ -48,6 +48,16 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
     return;
   }
 
+  if (err instanceof URIError && 'status' in err && err.status === 400) {
+    res.status(400).json({ error: 'Invalid URL parameter encoding' });
+    return;
+  }
+
+  if (hasErrorType(err, 'charset.unsupported')) {
+    res.status(400).json({ error: 'Unsupported JSON charset' });
+    return;
+  }
+
   console.error('Unhandled API error:', err);
   res.status(500).json({ error: 'Internal server error' });
 };

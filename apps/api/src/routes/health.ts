@@ -19,7 +19,7 @@ healthRouter.get('/', asyncHandler(async (_req, res) => {
     const response: HealthResponse = {
       status: 'error',
       database: 'disconnected',
-      message: 'Database unavailable.',
+      error: 'Database unavailable.',
       timestamp: new Date().toISOString(),
     };
     res.status(503).json(response);

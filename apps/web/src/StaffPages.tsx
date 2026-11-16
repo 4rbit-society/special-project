@@ -3,6 +3,7 @@ import { PREDEFINED_AVATARS } from '@starter/shared/constants';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { ChildProfile, Preferences, SharedPageProps } from './model';
 import './staff.css';
+import { ProgressPage } from './ProgressPage';
 
 type ContentPage = 'dashboard' | 'profiles' | 'progress' | 'settings' | 'cards';
 type Props = SharedPageProps & { page: ContentPage };
@@ -14,7 +15,7 @@ const avatarAssets: Record<string, { desktop: string; mobile: string; dashboard:
 };
 
 function Avatar({ avatar, variant = 'profile' }: { avatar: string; variant?: 'profile' | 'dashboard' }) {
-  if (!avatarAssets[avatar]) return <span className="staff-avatar" aria-hidden="true" style={{ fontSize: 56 }}>{avatar}</span>;
+  if (!avatarAssets[avatar]) return <span className="staff-avatar staff-avatar-emoji" aria-hidden="true">{avatar}</span>;
   const image = avatarAssets[avatar]!;
   if (variant === 'dashboard') return <span className="staff-avatar staff-avatar-dashboard"><img src={image.dashboard} alt="" /></span>;
   return <span className="staff-avatar staff-avatar-profile"><picture><source media="(max-width: 700px)" srcSet={image.mobile} /><img src={image.desktop} alt="" /></picture></span>;
@@ -112,20 +113,11 @@ function Profiles({ data, today, actions, formChild, formOpen, deleteChild, onEd
   return <div className="staff-page staff-profiles"><h1>Child Profiles</h1><p className="staff-lead">Manage the children you support.</p><button className="staff-button primary staff-add-child" onClick={onAdd}>Add child</button>
     <div className="staff-profile-list">{data.children.map((child) => {
       const schedule = data.schedules.find((item) => item.childId === child.id && item.date === today);
-      return <article className="staff-profile-card" key={child.id}><div className="staff-profile-identity"><Avatar avatar={child.avatar} /><div><h2>{child.name}</h2><p>Age {child.age} · {child.delayDomain}</p></div></div><div className="staff-profile-actions"><button className="staff-button secondary staff-profile-schedule" onClick={() => { actions.selectChild(child.id); actions.navigate('schedules'); }}>{schedule ? 'View schedule' : 'Create schedule'}</button><button className="staff-button secondary staff-profile-edit" onClick={() => onEdit(child)}><span className="staff-desktop-label">Edit</span><span className="staff-mobile-label">Edit profile</span></button><button className="staff-button secondary staff-profile-cards" onClick={() => { actions.selectChild(child.id); actions.navigate('cards'); }}>Manage picture cards</button><button className="staff-button danger staff-profile-delete" onClick={() => onDelete(child)}><span className="staff-desktop-label">Delete</span><span className="staff-mobile-label">Delete {child.name}</span></button></div></article>;
+      return <article className="staff-profile-card" key={child.id}><div className="staff-profile-identity"><Avatar avatar={child.avatar} /><div><h2>{child.name}</h2><p>Age {child.age} · {child.delayDomain}</p></div></div><div className="staff-profile-actions"><button className="staff-button secondary staff-profile-schedule" onClick={() => { actions.selectChild(child.id); actions.navigate('schedules'); }}>{schedule ? 'View schedule' : 'Create schedule'}</button><button className="staff-button secondary staff-profile-cards" onClick={() => { actions.selectChild(child.id); actions.navigate('cards'); }}>Manage picture cards</button><button className="staff-button secondary staff-profile-edit" onClick={() => onEdit(child)}><span className="staff-desktop-label">Edit</span><span className="staff-mobile-label">Edit profile</span></button><button className="staff-button danger staff-profile-delete" onClick={() => onDelete(child)}><span className="staff-desktop-label">Delete</span><span className="staff-mobile-label">Delete {child.name}</span></button></div></article>;
     })}</div>
   </div>;
 }
 
-function Progress({ data, selectedChildId, actions }: Props) {
-  const childId = data.children.some((child) => child.id === selectedChildId) ? selectedChildId : (data.children[0]?.id ?? 0);
-  const progress = data.progress[childId];
-  return <div className="staff-page staff-progress-page"><h1>Progress</h1><p>Completion history from your saved schedules. Completion times use your local time.</p>
-    <label className="staff-field">Child<select value={childId} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((child) => <option key={child.id} value={child.id}>{child.name}</option>)}</select></label>
-    <div className="staff-panel">{progress ? <WeekView data={data} childId={childId} today={progress.today.date} /> : <p>Add a child to view progress.</p>}</div>
-    <section className="staff-panel"><h2>Recent completions</h2>{progress?.recent_completions.length ? progress.recent_completions.map((task) => <p key={task.task_id}>{task.name} · <time dateTime={task.completed_at}>{new Date(task.completed_at).toLocaleString()}</time></p>) : <p>No completed activities yet.</p>}</section>
-  </div>;
-}
 
 function Settings({ data, actions }: Props) {
   const [draft, setDraft] = useState<Preferences>(data.preferences);
@@ -179,7 +171,7 @@ export function StaffPages(props: Props) {
   }), []);
   if (props.page === 'dashboard') return <Dashboard {...props} onAddChild={() => { props.actions.navigate('profiles'); setTimeout(handlers.onAdd, 0); }} />;
   if (props.page === 'profiles') return <Profiles {...props} formChild={formChild} formOpen={formOpen} deleteChild={deleteChild} {...handlers} />;
-  if (props.page === 'progress') return <Progress {...props} />;
+  if (props.page === 'progress') return <ProgressPage {...props} />;
   if (props.page === 'settings') return <Settings {...props} />;
   return <Cards {...props} />;
 }

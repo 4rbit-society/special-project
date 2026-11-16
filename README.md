@@ -1,6 +1,23 @@
-# Full-stack TypeScript starter
+# Araw · Visual schedules and picture cards
 
 An npm workspace with React + Vite, Express, and a shared types package. Requires Node.js 22.12+ and npm.
+
+## Frontend preview
+
+The responsive frontend follows the [Araw Figma design](https://www.figma.com/design/LIUnykdWEJ139auGBKjTUs/SRS-v2?node-id=26-3). It includes the staff dashboard, child profiles, schedule editor, task status, progress, settings, picture card management, and the child schedule and communication board. Figma SVG assets and Nunito fonts are bundled locally.
+
+Run the frontend alone without MySQL or the API:
+
+```sh
+npm ci
+npm run dev -w @starter/web
+```
+
+Open http://localhost:5173. On PowerShell systems that block `npm.ps1`, use `npm.cmd` instead of `npm`.
+
+This frontend currently uses demo profiles (Mika, Leo and Ari) and stores edits in browser local storage. Login and registration demonstrate the UI only. The backend endpoints described below are separate and are not connected to these screens yet. The communication board uses the browser's speech synthesis when available.
+
+Verify the frontend with `npm run typecheck -w @starter/web` and `npm run build -w @starter/web`.
 
 ```text
 apps/

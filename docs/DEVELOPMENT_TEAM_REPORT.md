@@ -1,5 +1,7 @@
 # Development Team Implementation Report
 
+> **Integration update ? November 17, 2026:** The detailed audit below describes application commit `157e69e` before frontend integration. The current working tree now connects all 26 existing endpoints and adds atomic schedule saving, with real browser validation across all 27 method/path combinations. Authentication, profiles, task completion, cards, progress and settings now use the backend. See the [current endpoint integration record](ENDPOINT_CROSS_REFERENCE.md) for updated behavior, tests and remaining limits. The historical requirement totals below must not be read as a fresh assessment of this newer working tree.
+
 **Project:** Web-Based Visual Schedule, Task Management and Communication System for Children with Developmental Delays
 
 **Review/update date:** November 16, 2026 (Asia/Singapore)

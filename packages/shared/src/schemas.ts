@@ -6,7 +6,8 @@ export const activityCategorySchema = z.enum(['hygiene', 'food', 'school', 'play
 export const pictureCardCategorySchema = z.enum(['Food', 'Emotions', 'Activities', 'Needs']);
 export const positiveIdSchema = z.coerce.number().int().positive();
 
-export const PREDEFINED_AVATARS = ['🦊', '🐼', '🐰', '🐻', '🐱', '🐶'] as const;
+export { PREDEFINED_AVATARS, PREDEFINED_ICONS } from './constants.js';
+import { PREDEFINED_AVATARS } from './constants.js';
 
 const childProfileFields = z.strictObject({
   name: z.string().trim().min(1).max(100),
@@ -55,6 +56,35 @@ export const createScheduleSchema = z.object({
 export const updateScheduleSchema = z.object({
   date: isoDate,
 });
+
+const draftTaskSchema = z.strictObject({
+  id: z.number().int().positive().optional(),
+  activityId: z.number().int().positive().optional(),
+  name: z.string().trim().min(1).max(100).optional(),
+  icon: z.string().min(1).optional(),
+  start_time: hhmm.nullable(),
+  duration_min: z.number().int().min(1).max(1440).nullable(),
+}).superRefine((task, ctx) => {
+  const content = task.activityId !== undefined || task.name !== undefined || task.icon !== undefined;
+  if (task.id !== undefined ? content : task.activityId !== undefined ? task.name !== undefined || task.icon !== undefined : !task.name || !task.icon) {
+    ctx.addIssue({ code: 'custom', message: 'Use an existing task id, a library activityId, or a custom name and icon' });
+  }
+});
+
+export const saveScheduleSchema = z.strictObject({
+  childId: z.number().int().positive(),
+  date: isoDate,
+  scheduleId: z.number().int().positive().optional(),
+  expectedTaskIds: z.array(z.number().int().positive()).max(500),
+  tasks: z.array(draftTaskSchema).max(500),
+}).superRefine((draft, ctx) => {
+  const ids = draft.tasks.flatMap((task) => task.id === undefined ? [] : [task.id]);
+  if (new Set(ids).size !== ids.length || new Set(draft.expectedTaskIds).size !== draft.expectedTaskIds.length) {
+    ctx.addIssue({ code: 'custom', message: 'Task ids must be unique' });
+  }
+});
+
+export type ScheduleDraftInput = z.infer<typeof saveScheduleSchema>;
 
 export const createTaskSchema = z
   .object({

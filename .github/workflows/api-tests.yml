@@ -50,6 +50,9 @@ jobs:
           --exclude tests/group1/seed.test.ts
           --exclude tests/group2/user-repository.test.ts
 
+      - name: Run frontend API client tests
+        run: npm test -w @starter/web
+
       - name: Run MySQL route integration tests
         env:
           DB_TEST_HOST: 127.0.0.1
@@ -72,3 +75,15 @@ jobs:
           tests/group1/schema.test.ts
           tests/group1/seed.test.ts
           tests/group2/user-repository.test.ts
+
+      - name: Install browser test runtime
+        run: npx playwright install --with-deps chromium
+
+      - name: Run connected browser tests
+        env:
+          DB_TEST_HOST: 127.0.0.1
+          DB_TEST_PORT: 3306
+          DB_TEST_USER: root
+          DB_TEST_PASSWORD: rootpassword
+          DB_TEST_NAME: special_project_browser_test
+        run: npm run test:e2e -w @starter/web

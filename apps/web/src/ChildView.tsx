@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
-import type { ScheduleTask, SharedPageProps } from './model';
+import type { DailySchedule, ScheduleTask, SharedPageProps } from './model';
 import './child.css';
 
 type Category = 'Food' | 'Emotions' | 'Activities' | 'Needs';
 type PictureCard = { id: string; label: string; icon: string; category: Category };
-type StoredPictureCard = { id: string | number; childId: number; label: string; icon: string; category: Category };
-
 const asset = (name: string) => `/assets/child-${name}.svg`;
 
 const illustrations: Record<string, string> = {
@@ -24,30 +22,6 @@ const illustrations: Record<string, string> = {
   toilet: 'toilet',
   help: 'help',
   school: 'school',
-};
-
-const pictureCards: Record<Category, PictureCard[]> = {
-  Food: [
-    { id: 'water', label: 'Water', icon: 'water', category: 'Food' },
-    { id: 'milk', label: 'Milk', icon: 'milk', category: 'Food' },
-    { id: 'rice', label: 'Rice', icon: 'rice', category: 'Food' },
-    { id: 'bread', label: 'Bread', icon: 'bread', category: 'Food' },
-  ],
-  Emotions: [
-    { id: 'happy', label: 'Happy', icon: 'happy', category: 'Emotions' },
-    { id: 'sad', label: 'Sad', icon: 'sad', category: 'Emotions' },
-    { id: 'tired', label: 'Tired', icon: 'tired', category: 'Emotions' },
-  ],
-  Activities: [
-    { id: 'play', label: 'Play', icon: 'play', category: 'Activities' },
-    { id: 'read', label: 'Read', icon: 'book', category: 'Activities' },
-    { id: 'school', label: 'School', icon: 'school', category: 'Activities' },
-  ],
-  Needs: [
-    { id: 'toilet', label: 'Toilet', icon: 'toilet', category: 'Needs' },
-    { id: 'help', label: 'Help', icon: 'help', category: 'Needs' },
-    { id: 'water', label: 'Water', icon: 'water', category: 'Needs' },
-  ],
 };
 
 const categoryIcons: Record<Category, string> = {
@@ -88,38 +62,28 @@ function Illustration({ icon, variant = 'tile' }: { icon: string; variant?: 'til
   );
 }
 
-function readCustomCards(): StoredPictureCard[] {
-  try {
-    const value = JSON.parse(localStorage.getItem('araw-custom-cards-v1') ?? '[]') as unknown;
-    if (!Array.isArray(value)) return [];
-    return value.filter((card): card is StoredPictureCard =>
-      !!card && typeof card === 'object' && 'label' in card && 'category' in card && 'childId' in card,
-    );
-  } catch {
-    return [];
-  }
-}
-
 function speak(text: string, onUnavailable: () => void): boolean {
   if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
     onUnavailable();
     return false;
   }
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 0.85;
-  window.speechSynthesis.speak(utterance);
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.85;
+    utterance.onerror = (event) => { if (event.error !== 'canceled' && event.error !== 'interrupted') onUnavailable(); };
+    window.speechSynthesis.speak(utterance);
+  } catch { onUnavailable(); return false; }
   return true;
 }
 
-export function ChildView({ data, selectedChildId, today, actions }: SharedPageProps) {
+export function ChildView({ data, selectedChildId, today, actions, preview }: SharedPageProps & { preview?: DailySchedule }) {
   const [section, setSection] = useState<'day' | 'talk'>('day');
   const [category, setCategory] = useState<Category>('Food');
   const [words, setWords] = useState<string[]>([]);
   const [voiceStatus, setVoiceStatus] = useState('');
   const [completedName, setCompletedName] = useState('');
   const [confirmExit, setConfirmExit] = useState(false);
-  const [customCards, setCustomCards] = useState(readCustomCards);
 
   useEffect(() => {
     setSection('day');
@@ -127,23 +91,17 @@ export function ChildView({ data, selectedChildId, today, actions }: SharedPageP
     setWords([]);
     setVoiceStatus('');
     setCompletedName('');
-    setCustomCards(readCustomCards());
   }, [selectedChildId]);
 
   const child = data.children.find((item) => item.id === selectedChildId);
-  const schedule = data.schedules.find((item) => item.childId === selectedChildId && item.date === today);
+  const schedule = preview ?? data.schedules.find((item) => item.childId === selectedChildId && item.date === today);
   const tasks = schedule?.tasks ?? [];
   const doneCount = tasks.filter((task) => task.status === 'done').length;
   const currentIndex = tasks.findIndex((task) => task.status !== 'done');
   const currentTask = currentIndex >= 0 ? tasks[currentIndex] : undefined;
-  const nextTask = currentIndex >= 0 ? tasks[currentIndex + 1] : undefined;
+  const nextTask = currentIndex >= 0 ? tasks.slice(currentIndex + 1).find((task) => task.status === 'pending') : undefined;
   const allDone = tasks.length > 0 && !currentTask;
-  const visibleCards = [
-    ...pictureCards[category],
-    ...customCards
-      .filter((card) => card.childId === selectedChildId && card.category === category)
-      .map((card) => ({ id: String(card.id), label: card.label, icon: card.icon, category: card.category })),
-  ];
+  const visibleCards = (data.cards[selectedChildId] ?? []).filter((card) => !card.is_hidden && card.category === category).map((card) => ({ ...card, id: String(card.id) }));
   const phrase = words.length ? `I want ${words.map((word) => word.toLowerCase()).join(' ')}` : 'I want ...';
 
   function selectCard(card: PictureCard) {
@@ -154,10 +112,9 @@ export function ChildView({ data, selectedChildId, today, actions }: SharedPageP
     }
   }
 
-  function completeCurrentTask() {
-    if (!currentTask) return;
-    actions.markTask(selectedChildId, currentTask.id, true);
-    setCompletedName(currentTask.name);
+  async function completeCurrentTask() {
+    if (!currentTask || preview) return;
+    if (await actions.markTask(selectedChildId, currentTask.id, true, today)) setCompletedName(currentTask.name);
   }
 
   function renderProgress() {
@@ -182,7 +139,7 @@ export function ChildView({ data, selectedChildId, today, actions }: SharedPageP
           <h1>Return to staff workspace?</h1>
           <p>An adult can continue here. Your completed activities are saved.</p>
           <button className="child-button child-button--primary" onClick={() => setConfirmExit(false)}>Stay in Child view</button>
-          <button className="child-button child-button--secondary" onClick={() => actions.navigate('dashboard')}>Return to staff workspace</button>
+          <button className="child-button child-button--secondary" onClick={() => actions.navigate(preview ? 'schedules' : 'dashboard')}>Return to staff workspace</button>
         </div>
       </main>
     );
@@ -190,7 +147,7 @@ export function ChildView({ data, selectedChildId, today, actions }: SharedPageP
 
   return (
     <main className={`child-view ${data.preferences.contrast === 'high' ? 'child-view--high-contrast' : ''} child-view--text-${data.preferences.fontSize}`}>
-      <div className="child-content">
+      <div className="child-content">{preview && <p role="status">Preview · {today} · Changes are not saved</p>}
         <header className="child-header">
           <span className="child-mascot" aria-hidden="true"><img src={asset(section === 'talk' ? 'mascot-listen' : 'mascot-wave')} alt="" /></span>
           <h1>{child.name}’s day</h1>
@@ -234,7 +191,7 @@ export function ChildView({ data, selectedChildId, today, actions }: SharedPageP
                       <h2>Now</h2>
                       <Illustration icon={taskIllustration(currentTask)} variant="large" />
                       <strong>{currentTask.name}</strong>
-                      <button className="child-done-button" onClick={completeCurrentTask}>✓ Done</button>
+                      <button className="child-done-button" disabled={!!preview} onClick={completeCurrentTask}>✓ Done</button>
                     </section>
                     <section className="child-next">
                       <h2>Next</h2>

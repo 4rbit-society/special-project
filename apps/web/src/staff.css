@@ -75,6 +75,7 @@
 .staff-avatar { display: flex; align-items: center; justify-content: center; flex: none; }
 .staff-avatar-dashboard { width: 48px; height: 48px; }
 .staff-avatar-profile { width: 48px; height: 48px; }
+.staff-avatar-emoji { font-size: 56px; }
 .staff-avatar img { display: block; max-width: none; }
 .staff-child-card .staff-button { width: 100%; }
 .staff-child-card p { min-height: 24px; }
@@ -94,15 +95,16 @@
 .staff-progress-bar span { display: block; height: 100%; border-radius: inherit; background: var(--staff-blue); }
 
 .staff-profile-list { display: flex; flex-direction: column; gap: 24px; }
-.staff-profile-card { position: relative; min-height: 218px; padding: 24px; border: 1px solid var(--staff-border); border-radius: 12px; background: #fff; }
-.staff-profile-identity { display: flex; align-items: flex-start; gap: 24px; }
-.staff-profile-identity h2 { margin-bottom: 4px; }
+.staff-profile-card { display: flex; flex-direction: column; gap: 24px; min-width: 0; padding: 24px; border: 1px solid var(--staff-border); border-radius: 12px; background: #fff; }
+.staff-profile-identity { display: flex; align-items: center; gap: 20px; min-width: 0; }
+.staff-profile-identity > div { min-width: 0; }
+.staff-profile-identity > .staff-avatar { width: 64px; min-height: 64px; font-size: 48px; }
+.staff-profile-identity h2 { margin-bottom: 4px; overflow-wrap: anywhere; }
 .staff-profile-identity p { color: var(--staff-muted); }
-.staff-profile-actions .staff-button { position: absolute; }
-.staff-profile-edit { top: 24px; right: 196px; width: 176px; }
-.staff-profile-delete { top: 24px; right: 24px; width: 176px; }
-.staff-profile-schedule { left: 24px; top: 104px; width: 240px; }
-.staff-profile-cards { left: 24px; top: 162px; width: 320px; }
+.staff-profile-actions { display: flex; flex-wrap: wrap; align-items: stretch; gap: 12px; border-top: 1px solid var(--staff-border); padding-top: 20px; }
+.staff-profile-actions .staff-button { position: static; max-width: 100%; min-width: 112px; overflow-wrap: anywhere; }
+.staff-profile-schedule, .staff-profile-cards { flex: 0 1 auto; }
+.staff-profile-edit { margin-left: auto; }
 
 .staff-profile-form, .staff-settings-form { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 752px; }
 .staff-avatar-picker, .staff-card-picker, .staff-choice-group { border: 0; padding: 0; margin: 0; min-width: 0; }
@@ -197,15 +199,14 @@
   .staff-week-grid-compact .staff-week-date, .staff-week-grid-compact .staff-week-details, .staff-week-grid-compact .staff-week-percent, .staff-week-grid-compact .staff-progress-bar { display: none; }
   .staff-week-mobile-line { display: block; font-size: 14px; line-height: 24px; }
   .staff-profile-card { min-height: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
-  .staff-profile-identity { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .staff-profile-identity { flex-direction: row; align-items: center; gap: 12px; }
   .staff-profile-identity h2 { font-size: 24px; }
   .staff-avatar-profile { width: 48px; height: 48px; justify-content: flex-start; }
-  .staff-profile-actions { display: flex; flex-direction: column; gap: 12px; }
-  .staff-profile-actions .staff-button { position: static; width: 100%; }
-  .staff-profile-schedule { order: 1; background: var(--staff-blue); color: #fff; border-color: var(--staff-blue); }
-  .staff-profile-edit { order: 2; }
-  .staff-profile-cards { order: 3; }
-  .staff-profile-delete { order: 4; }
+  .staff-profile-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding-top: 16px; }
+  .staff-profile-actions .staff-button { width: 100%; min-width: 0; margin: 0; }
+  .staff-profile-schedule { grid-column: 1 / -1; background: var(--staff-blue); color: #fff; border-color: var(--staff-blue); }
+  .staff-profile-cards { grid-column: 1 / -1; }
+  .staff-profile-delete .staff-mobile-label { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .staff-profile-form, .staff-settings-form { max-width: none; }
   .staff-profile-form { padding: 16px; }
   .staff-avatar-picker > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }

@@ -6,7 +6,7 @@ import { checkDatabaseConnection, getDatabasePool } from '../../src/db/pool.js';
 describe('1.1 MySQL connection module', () => {
   it('exposes a pool that reaches the configured database', async () => {
     const [rows] = await getDatabasePool().query('SELECT DATABASE() AS db');
-    expect(rows).toEqual([expect.objectContaining({ db: 'special_project_test' })]);
+    expect(rows).toEqual([expect.objectContaining({ db: process.env.DB_NAME })]);
   });
 
   it('checkDatabaseConnection resolves when the database is up', async () => {

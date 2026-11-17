@@ -1,8 +1,9 @@
-import type { Activity, Child, ChildProfileInput, ChildProfileUpdate } from '@starter/shared';
+import type { Activity, Child, ChildProfileInput, ChildProfileUpdate, ScheduleDraftInput } from '@starter/shared';
 import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import * as mock from '../mocks/data.js';
 import { getDatabasePool } from './pool.js';
 import { HttpError } from '../lib/errors.js';
+import { createHash } from 'node:crypto';
 
 export type { Activity, Child } from '@starter/shared';
 
@@ -511,4 +512,97 @@ export async function setTaskCompletion(task: Task, done: boolean): Promise<Task
     throw new Error('Expected task row was not found after completion update.');
   }
   return normalizeTask(row);
+}
+
+export function scheduleRevision(schedule: Schedule, tasks: Task[]): string {
+  // Completion is deliberately excluded: marking Done must not invalidate an editor.
+  const snapshot = [schedule.id, schedule.child_id, schedule.schedule_date, tasks.map((task) => [task.id, task.activity_id, task.name, task.icon, task.start_time, task.duration_min, task.position])];
+  return createHash('sha256').update(JSON.stringify(snapshot)).digest('hex');
+}
+
+// The editor submits one draft so failures cannot leave half a schedule saved.
+export async function saveScheduleForUser(userId: number, draft: ScheduleDraftInput): Promise<Schedule & { tasks: Task[]; revision: string }> {
+  function validateSnapshot(schedule: Schedule | undefined, tasks: Task[]) {
+    if (schedule?.id !== draft.scheduleId || tasks.map((task) => task.id).join(',') !== draft.expectedTaskIds.join(',') || (schedule && draft.expectedRevision !== scheduleRevision(schedule, tasks))) {
+      throw new HttpError(409, 'This schedule changed. Reload it before saving your draft.');
+    }
+    if (draft.tasks.some((task) => task.id !== undefined && !tasks.some((current) => current.id === task.id))) {
+      throw new HttpError(400, 'A task does not belong to this schedule');
+    }
+  }
+  async function resolveContent(lookup: (id: number) => Promise<Activity | undefined>) {
+    return Promise.all(draft.tasks.map(async (task) => {
+      if (task.id !== undefined) return undefined;
+      if (task.activityId !== undefined) {
+        const activity = await lookup(task.activityId);
+        if (!activity) throw new HttpError(400, 'Unknown activity');
+        return { activity_id: activity.id, name: activity.name, icon: activity.icon };
+      }
+      if (!isPredefinedIcon(task.icon!)) throw new HttpError(400, 'icon must be one of the predefined icons');
+      return { activity_id: null, name: task.name!, icon: task.icon! };
+    }));
+  }
+  if (useMockStore()) {
+    if (!mock.findChildForUser(draft.childId, userId)) throw new HttpError(404, 'Child not found');
+    let schedule = mock.findScheduleByChildAndDate(draft.childId, draft.date);
+    const old = schedule ? mock.tasksForSchedule(schedule.id) : [];
+    validateSnapshot(schedule, old);
+    const contents = await resolveContent(async (id) => mock.findActivity(id));
+    schedule ??= mock.createSchedule(draft.childId, draft.date);
+    for (const task of old) if (!draft.tasks.some((item) => item.id === task.id)) mock.removeTask(task);
+    draft.tasks.forEach((input, index) => {
+      const task = input.id === undefined ? mock.addTask(schedule!.id, contents[index]!) : old.find((task) => task.id === input.id)!;
+      mock.applyTaskUpdate(task, { start_time: input.start_time, duration_min: input.duration_min, position: index + 1 });
+    });
+    const tasks = mock.tasksForSchedule(schedule.id);
+    return { ...schedule, tasks, revision: scheduleRevision(schedule, tasks) };
+  }
+  const connection = await getDatabasePool().getConnection();
+  try {
+    await connection.beginTransaction();
+    const [children] = await connection.query<RowDataPacket[]>('SELECT id FROM children WHERE id = ? AND user_id = ? FOR UPDATE', [draft.childId, userId]);
+    if (children.length === 0) throw new HttpError(404, 'Child not found');
+    const [schedules] = await connection.query<ScheduleRow[]>('SELECT * FROM schedules WHERE child_id = ? AND schedule_date = ? FOR UPDATE', [draft.childId, draft.date]);
+    let schedule = schedules[0] ? normalizeSchedule(schedules[0]) : undefined;
+    const [oldRows] = schedule ? await connection.query<TaskRow[]>('SELECT * FROM tasks WHERE schedule_id = ? ORDER BY position FOR UPDATE', [schedule.id]) : [[]];
+    const old = oldRows.map(normalizeTask);
+    validateSnapshot(schedule, old);
+    const contents = await resolveContent(async (id) => {
+      const [rows] = await connection.query<ActivityRow[]>('SELECT id, name, icon, category FROM activities WHERE id = ?', [id]);
+      return rows[0] ? normalizeActivity(rows[0]) : undefined;
+    });
+    if (!schedule) {
+      const [result] = await connection.execute<ResultSetHeader>('INSERT INTO schedules (child_id, schedule_date) VALUES (?, ?)', [draft.childId, draft.date]);
+      const [rows] = await connection.query<ScheduleRow[]>('SELECT * FROM schedules WHERE id = ?', [result.insertId]);
+      schedule = normalizeSchedule(rows[0]!);
+    }
+    const temporaryBase = Math.max(draft.tasks.length, ...old.map((task) => task.position), 0) + 1;
+    if (temporaryBase + old.length > 65535) throw new HttpError(409, 'This schedule has too many tasks to reorder');
+    for (const [index, task] of old.entries()) {
+      if (draft.tasks.some((item) => item.id === task.id)) {
+        await connection.execute('UPDATE tasks SET position = ? WHERE id = ?', [temporaryBase + index, task.id]);
+      } else {
+        await connection.execute('DELETE FROM tasks WHERE id = ?', [task.id]);
+      }
+    }
+    for (const [index, task] of draft.tasks.entries()) {
+      if (task.id !== undefined) {
+        // Never overwrite completion from a stale editor draft.
+        await connection.execute('UPDATE tasks SET position = ?, start_time = ?, duration_min = ? WHERE id = ?', [index + 1, task.start_time, task.duration_min, task.id]);
+      } else {
+        const content = contents[index]!;
+        await connection.execute('INSERT INTO tasks (schedule_id, activity_id, name, icon, start_time, duration_min, position) VALUES (?, ?, ?, ?, ?, ?, ?)', [schedule.id, content.activity_id, content.name, content.icon, task.start_time, task.duration_min, index + 1]);
+      }
+    }
+    const [rows] = await connection.query<TaskRow[]>('SELECT * FROM tasks WHERE schedule_id = ? ORDER BY position', [schedule.id]);
+    await connection.commit();
+    const tasks = rows.map(normalizeTask);
+    return { ...schedule, tasks, revision: scheduleRevision(schedule, tasks) };
+  } catch (error) {
+    await connection.rollback();
+    if (isDuplicateEntry(error)) throw new HttpError(409, 'This schedule changed. Reload it before saving your draft.');
+    throw error;
+  } finally {
+    connection.release();
+  }
 }

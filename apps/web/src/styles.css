@@ -9,6 +9,12 @@ button,input,select,textarea{font:inherit}
 button{cursor:pointer}
 button:disabled{cursor:default}
 :focus-visible{outline:3px solid #f5a623;outline-offset:2px}
+.workspace-lock{border:0;margin:0;padding:0;min-width:0;width:100%}
+.auth-card .workspace-lock{display:flex;flex-direction:column;gap:16px}
+.request-status{position:sticky;top:0;padding:12px;background:#e9f1fb;color:#1f2933;z-index:50}
+.app-root{--araw-color-text:var(--ink);--araw-color-muted:var(--muted);--araw-color-action:var(--action);--araw-color-border:var(--border);--araw-color-canvas:var(--canvas)}
+.app-root.font-small{--body-font-size:16px}.app-root.font-medium{--body-font-size:18px}.app-root.font-large{--body-font-size:20px}
+.app-root .staff-page p,.app-root .staff-field,.app-root .staff-field input,.app-root .staff-field select,.app-root .staff-page small,.app-root .staff-choice-group label,.app-root .staff-button,.app-root .schedule-page p,.app-root .schedule-page label,.app-root .schedule-helper,.app-root .schedule-task-description span,.app-root .schedule-chip,.app-root .schedule-status-badge{font-size:var(--body-font-size);line-height:1.5}
 .app-root{--ink:#1f2933;--muted:#526176;--border:#8090a4;--action:#1f5fab;--selected:#e9f1fb;--canvas:#f5f8fc;min-height:100vh;background:var(--canvas);color:var(--ink)}
 .app-root.contrast-high{--ink:#111;--muted:#222;--border:#111;--action:#003d99;--selected:#d9e7ff;--canvas:#fff}
 .app-root.font-small{font-size:16px}.app-root.font-medium{font-size:18px}.app-root.font-large{font-size:20px}

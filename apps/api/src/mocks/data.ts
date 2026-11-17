@@ -1,6 +1,7 @@
 // Mock stand-in for Group 1 persistence, used by child, schedule, task, and progress routes.
 // In-memory only; replace with parameterized SQL while keeping these signatures.
 import type { Activity, Child, ChildProfileInput, ChildProfileUpdate } from '@starter/shared';
+import { PREDEFINED_ICONS } from '@starter/shared';
 
 export type { Activity, Child } from '@starter/shared';
 
@@ -24,11 +25,7 @@ export interface Task {
   completed_at: string | null;
 }
 
-export const PREDEFINED_ICONS: string[] = [
-  '☀️', '🪥', '🧼', '🍎', '👕', '🚽', '🚌', '📚', '🧸', '🛁', '🌙', '🥪',
-  '⭐', '🎯', '🧩', '🎨', '🎵', '🏃', '💧', '🥛', '🍞', '🍚', '😴', '🎉', '❤️', '🙌',
-  '📺', '😊', '😢',
-];
+export { PREDEFINED_ICONS } from '@starter/shared';
 
 const ACTIVITIES: Activity[] = [
   { id: 1, name: 'Wake up', icon: '☀️', category: 'other' },

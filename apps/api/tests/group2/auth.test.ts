@@ -18,6 +18,18 @@ async function loginToken(): Promise<string> {
 }
 
 describe('register', () => {
+  it('rejects passwords longer than 72 UTF-8 bytes instead of silently truncating them', async () => {
+    const password = 'é'.repeat(36) + 'x';
+    const res = await request(app).post('/api/auth/register').send({ ...valid, password });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('72');
+  });
+  it('accepts exactly 72 UTF-8 bytes and rejects a truncated-password login', async () => {
+    const password = '\u00e9'.repeat(36);
+    expect((await request(app).post('/api/auth/register').send({ ...valid, password })).status).toBe(201);
+    expect((await request(app).post('/api/auth/login').send({ email: valid.email, password })).status).toBe(200);
+    expect((await request(app).post('/api/auth/login').send({ email: valid.email, password: password + 'x' })).status).toBe(400);
+  });
   it('creates a user without exposing the hash', async () => {
     const res = await request(app).post('/api/auth/register').send(valid);
     expect(res.status).toBe(201);

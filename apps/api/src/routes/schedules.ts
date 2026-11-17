@@ -12,12 +12,15 @@ import {
   setScheduleDate,
   tasksForSchedule,
   type Schedule,
+  saveScheduleForUser,
+  scheduleRevision,
 } from '../db/feature-data.js';
 import {
   createScheduleSchema,
   idParamSchema,
   scheduleQuerySchema,
   updateScheduleSchema,
+  saveScheduleSchema,
 } from '@starter/shared';
 
 export function schedulesRouter(users: UserRepository): Router {
@@ -25,7 +28,8 @@ export function schedulesRouter(users: UserRepository): Router {
   router.use(requireAuth(users));
 
   async function serializeSchedule(schedule: Schedule) {
-    return { ...schedule, tasks: await tasksForSchedule(schedule.id) };
+    const tasks = await tasksForSchedule(schedule.id);
+    return { ...schedule, tasks, revision: scheduleRevision(schedule, tasks) };
   }
 
   async function ownedSchedule(req: Request, id: number): Promise<Schedule> {
@@ -70,6 +74,14 @@ export function schedulesRouter(users: UserRepository): Router {
       }
       const schedule = await createSchedule(childId, date, source?.id);
       res.status(201).json(await serializeSchedule(schedule));
+    }),
+  );
+
+  router.put(
+    '/',
+    asyncHandler(async (req, res) => {
+      const draft = parse(saveScheduleSchema, req.body);
+      res.json(await saveScheduleForUser(currentUser(req).id, draft));
     }),
   );
 

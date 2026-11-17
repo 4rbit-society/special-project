@@ -1,10 +1,15 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import type { ApiSchedule, PublicUser } from '@starter/shared';
 import { ChildView } from './ChildView';
-import { SchedulePages, activityLibrary } from './SchedulePages';
+import { SchedulePages } from './SchedulePages';
 import { StaffPages } from './StaffPages';
-import type { AppActions, AppData, ChildProfile, DailySchedule, Page, Preferences, ScheduleTask, StaffPage } from './model';
+import { ApiClient, ApiError } from './lib/client';
+import { activityFromApi, childFromApi, childToApi, draftToApi, emptyData, mergeSchedule, preferencesFromApi, preferencesToApi, scheduleFromApi, taskFromApi } from './lib/adapters';
+import type { AppActions, AppData, DailySchedule, Page, StaffPage } from './model';
 
-const storageKey = 'araw-frontend-demo-v1';
+import { localDate } from './lib/date';
+import { tokenKey, readToken, clearToken, writeToken, hasTabSession } from './lib/session';
+const base = import.meta.env.VITE_API_BASE_URL ?? '';
 const navItems: { page: StaffPage; label: string; icon: string }[] = [
   { page: 'dashboard', label: 'Dashboard', icon: '/assets/figma-701fc.svg' },
   { page: 'profiles', label: 'Child Profiles', icon: '/assets/figma-5e608.svg' },
@@ -12,132 +17,147 @@ const navItems: { page: StaffPage; label: string; icon: string }[] = [
   { page: 'progress', label: 'Progress', icon: '/assets/figma-3bc4a.svg' },
   { page: 'settings', label: 'Settings', icon: '/assets/figma-5cefd.svg' },
 ];
-
-function localDate(date = new Date()) {
-  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
-}
-
-function offsetDate(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return localDate(date);
-}
-
-function seedTask(activityId: string, index: number, done: boolean, date: string): ScheduleTask {
-  const activity = activityLibrary.find((item) => item.activityId === activityId) ?? activityLibrary[0]!;
-  return { ...activity, id: `demo-${date}-${activityId}-${index}`, startTime: activityId === 'learning' ? '09:00' : '', duration: activityId === 'learning' ? 20 : null, status: done ? 'done' : 'pending' };
-}
-
-function initialData(): AppData {
-  const children: ChildProfile[] = [
-    { id: 1, name: 'Mika', age: 6, delayDomain: 'Speech', notes: '', avatar: 'happy' },
-    { id: 2, name: 'Leo', age: 7, delayDomain: 'Motor', notes: '', avatar: 'play' },
-    { id: 3, name: 'Ari', age: 5, delayDomain: 'General', notes: '', avatar: 'book' },
-  ];
-  const pattern = ['wake', 'brush', 'breakfast', 'dress', 'learning', 'play'];
-  const history = [
-    { offset: -6, count: 4, done: 4 }, { offset: -5, count: 4, done: 3 },
-    { offset: -3, count: 5, done: 4 }, { offset: -2, count: 5, done: 5 },
-    { offset: -1, count: 6, done: 4 }, { offset: 0, count: 6, done: 4 },
-  ];
-  const schedules: DailySchedule[] = history.map(({ offset, count, done }) => {
-    const date = offsetDate(offset);
-    return { id: `demo-mika-${date}`, childId: 1, date, tasks: pattern.slice(0, count).map((id, index) => seedTask(id, index, index < done, date)) };
-  });
-  const leoDate = offsetDate(0);
-  schedules.push({ id: `demo-leo-${leoDate}`, childId: 2, date: leoDate, tasks: ['wake', 'brush', 'play', 'bed'].map((id, index) => seedTask(id, index, false, leoDate)) });
-  return { children, schedules, preferences: { fontSize: 'small', contrast: 'normal', soundOn: false } };
-}
-
-function readData(): AppData {
-  try {
-    const saved = window.localStorage.getItem(storageKey);
-    if (saved) {
-      const parsed = JSON.parse(saved) as AppData;
-      if (Array.isArray(parsed.children) && Array.isArray(parsed.schedules) && parsed.preferences) return parsed;
-    }
-  } catch { /* Continue with the built-in demo. */ }
-  return initialData();
-}
-
 function pageFromHash(): Page {
-  const requested = window.location.hash.slice(1);
-  const pages: Page[] = ['dashboard', 'profiles', 'schedules', 'tasks', 'progress', 'settings', 'cards', 'child', 'login', 'register'];
-  return pages.find((page) => page === requested) ?? 'dashboard';
+  const requested = location.hash.slice(1);
+  return ['dashboard', 'profiles', 'schedules', 'tasks', 'progress', 'settings', 'cards', 'child', 'login', 'register'].includes(requested) ? requested as Page : 'dashboard';
 }
-
+const messageOf = (error: unknown) => error instanceof Error ? error.message : 'The change could not be saved. Please retry.';
 function Brand({ reversed = false }: { reversed?: boolean }) {
   return <div className={`araw-brand ${reversed ? 'reversed' : ''}`}><img src={reversed ? '/assets/brand-mark-large.svg' : '/assets/brand-mark.svg'} alt="" /><span>Araw</span></div>;
 }
-
-function AuthScreen({ page, onPage, onLogin }: { page: 'login' | 'register'; onPage: (page: Page) => void; onLogin: () => void }) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('Caregiver');
-  const [error, setError] = useState('');
-  const register = page === 'register';
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (register && password.length < 8) { setError('Use at least 8 characters.'); return; }
-    if (register && name.trim()) { try { window.localStorage.setItem('araw-staff-name-v1', name.trim()); } catch { /* Continue without persistence. */ } }
-    onLogin();
+function AuthScreen({ page, onPage, onLogin }: { page: 'login' | 'register'; onPage: (page: Page) => void; onLogin: (token: string, remember: boolean) => void }) {
+  const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
+  const [role, setRole] = useState<PublicUser['role']>('caregiver'); const [remember, setRemember] = useState(false);
+  const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const [registered, setRegistered] = useState(false); const register = page === 'register' && !registered;
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (busy) return; setBusy(true); setError('');
+    try {
+      const api = new ApiClient(null, undefined, base);
+      if (new TextEncoder().encode(password).length > 72) throw new Error('Password must be at most 72 UTF-8 bytes.');
+      if (register) { await api.register({ name, email, password, role }); setRegistered(true); }
+      const result = await api.login(email, password); onLogin(result.token, remember);
+    } catch (error) { setError(messageOf(error)); } finally { setBusy(false); }
   }
   return <main className="auth-page"><div className="auth-layout">
     <section className="auth-intro"><Brand reversed /><h1>A clear day,<br />one step at a time.</h1><p>Visual schedules and picture cards</p></section>
-    <form className="auth-card" onSubmit={submit}><div className="auth-mobile-logo"><Brand /></div><h2>{register ? 'Create your account' : 'Welcome back'}</h2>{!register && <p>For caregivers, OTs and SPED teachers.</p>}
-      {register && <label>Name<input required value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" placeholder="Mara Santos" /></label>}
-      <label>Email<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder="you@example.com" /></label>
-      <label>Password<input required type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={register ? 'new-password' : 'current-password'} placeholder="••••••••" /></label>
-      {register && <><small>Use at least 8 characters.</small><fieldset><legend>Role</legend>{['Caregiver', 'OT', 'SPED Teacher'].map((item) => <label className={`auth-role ${role === item ? 'selected' : ''}`} key={item}><input type="radio" value={item} checked={role === item} onChange={() => setRole(item)} />{item}</label>)}</fieldset></>}
-      {error && <div className="auth-error" role="alert">{error}</div>}
-      <button className="button button-primary" type="submit">{register ? 'Create account' : 'Log in'}</button><button className="button button-outline" type="button" onClick={() => { setError(''); onPage(register ? 'login' : 'register'); }}>{register ? 'Back to log in' : 'Create an account'}</button>
-    </form>
-  </div></main>;
+    <form className="auth-card" onSubmit={submit}><div className="auth-mobile-logo"><Brand /></div><h2>{register ? 'Create your account' : 'Welcome back'}</h2><p>{registered ? 'Your account was created. Log in to continue.' : 'For caregivers, OTs and SPED teachers.'}</p>
+      <fieldset className="workspace-lock" disabled={busy}>
+        {register && <label>Name<input required maxLength={100} value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" /></label>}
+        <label>Email<input required type="email" maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></label>
+        <label>Password<input required minLength={register ? 8 : 1} maxLength={72} type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={register ? 'new-password' : 'current-password'} /></label>
+        {register && <fieldset><legend>Role</legend>{(['caregiver', 'ot', 'sped_teacher'] as const).map((item) => <label className={`auth-role ${role === item ? 'selected' : ''}`} key={item}><input type="radio" name="role" checked={role === item} onChange={() => setRole(item)} />{item === 'caregiver' ? 'Caregiver' : item === 'ot' ? 'OT' : 'SPED Teacher'}</label>)}</fieldset>}
+        <label className="auth-role"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />Remember me on this device</label>
+        {error && <div className="auth-error" role="alert">{error}</div>}
+        <button className="button button-primary" type="submit">{busy ? 'Please wait…' : register ? 'Create account' : 'Log in'}</button>
+        <button className="button button-outline" type="button" onClick={() => { setError(''); setRegistered(false); onPage(register ? 'login' : 'register'); }}>{register ? 'Back to log in' : 'Create an account'}</button>
+      </fieldset>
+    </form></div></main>;
 }
 
 export function App() {
-  const [data, setData] = useState<AppData>(readData);
-  const [page, setPage] = useState<Page>(pageFromHash);
-  const [selectedChildId, setSelectedChildId] = useState(1);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const today = localDate();
-  let staffName = 'Mara Santos';
-  try { staffName = window.localStorage.getItem('araw-staff-name-v1') || staffName; } catch { /* Keep the demo name. */ }
-
-  useEffect(() => { try { window.localStorage.setItem(storageKey, JSON.stringify(data)); } catch { /* Continue without persistence. */ } }, [data]);
-  useEffect(() => {
-    const onHashChange = () => setPage(pageFromHash());
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
+  const [token, setToken] = useState(readToken); const tokenRef = useRef(token); tokenRef.current = token;
+  const epoch = useRef(0); const busyRef = useRef(false); const cardRevisions = useRef(new Map<number, number>());
+  const [data, setData] = useState<AppData>(emptyData); const dataRef = useRef(data); dataRef.current = data;
+  const [page, setPage] = useState<Page>(pageFromHash); const [selectedChildId, setSelectedChildId] = useState(0);
+  const pageRef = useRef(page); pageRef.current = page;
+  const leaveGuard = useRef<() => boolean>(() => true);
+  const setNavigationGuard = useCallback((guard: () => boolean) => { leaveGuard.current = guard; return () => { if (leaveGuard.current === guard) leaveGuard.current = () => true; }; }, []);
+  const [menuOpen, setMenuOpen] = useState(false); const [busy, setBusy] = useState(false); const [loading, setLoading] = useState(!!token);
+  const [message, setMessage] = useState(''); const [loadError, setLoadError] = useState(''); const [retry, setRetry] = useState(0);
+  const [today, setToday] = useState(() => localDate());
+  function navigate(next: Page, confirmed = false) { if (next !== pageRef.current && !confirmed && !leaveGuard.current()) return; pageRef.current = next; setPage(next); setMenuOpen(false); location.hash = next; }
+  const logout = useCallback((reason = '') => {
+    if (!reason && !leaveGuard.current()) return;
+    const previous = tokenRef.current; epoch.current++; tokenRef.current = null; busyRef.current = false; clearToken(previous); setToken(null); setData(emptyData()); setSelectedChildId(0); setBusy(false); setLoading(false); setMessage(reason); pageRef.current = 'login'; setPage('login'); location.hash = 'login';
   }, []);
-
-  function navigate(next: Page) {
-    setPage(next);
-    setMenuOpen(false);
-    if (window.location.hash !== `#${next}`) window.location.hash = next;
+  const api = useMemo(() => new ApiClient(token, () => { if (tokenRef.current === token) logout('Your session expired. Please log in again.'); }, base), [token, logout]);
+  useEffect(() => {
+    const hash = () => { const next = pageFromHash(); if (next !== pageRef.current && !leaveGuard.current()) { history.replaceState(null, '', '#' + pageRef.current); return; } pageRef.current = next; setPage(next); setMenuOpen(false); };
+    const storage = (event: StorageEvent) => { const current = tokenRef.current; if (current && !hasTabSession(current) && (event.key === tokenKey || event.key === null) && readToken() !== current) logout('Your session changed in another tab. Please log in again.'); };
+    window.addEventListener('hashchange', hash); window.addEventListener('storage', storage);
+    const timer = setInterval(() => { if (!busyRef.current && pageRef.current !== 'schedules') setToday(localDate()); }, 60_000);
+    return () => { clearInterval(timer); window.removeEventListener('hashchange', hash); window.removeEventListener('storage', storage); };
+  }, [logout]);
+  const fetchSchedule = useCallback(async (childId: number, date: string): Promise<ApiSchedule | null> => {
+    try { return await api.schedule(childId, date); } catch (error) { if (error instanceof ApiError && error.status === 404) return null; throw error; }
+  }, [api]);
+  useEffect(() => {
+    if (!token) return;
+    const generation = ++epoch.current; let cancelled = false; busyRef.current = false; setBusy(false); setLoading(true); setLoadError('');
+    void (async () => {
+      try {
+        const [user, children, activities, settings] = await Promise.all([api.me(), api.children(), api.activities(), api.settings(), api.health()]);
+        const mappedActivities = activities.map(activityFromApi);
+        const records = await Promise.all(children.map(async (child) => ({ child, schedule: await fetchSchedule(child.id, today), progress: await api.progress(child.id) })));
+        if (cancelled || generation !== epoch.current) return;
+        setData({ user, children: children.map(childFromApi), activities: mappedActivities, preferences: preferencesFromApi(settings), schedules: records.flatMap((item) => item.schedule ? [scheduleFromApi(item.schedule, mappedActivities)] : []), cards: {}, progress: Object.fromEntries(records.map((item) => [item.child.id, item.progress])) });
+        setSelectedChildId((id) => children.some((child) => child.id === id) ? id : children[0]?.id ?? 0);
+      } catch (error) { if (!cancelled && generation === epoch.current) setLoadError(messageOf(error)); }
+      finally { if (!cancelled && generation === epoch.current) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [token, api, fetchSchedule, retry, today]);
+  const loadSchedule = useCallback(async (childId: number, date: string) => {
+    const generation = epoch.current;
+    try {
+      const result = await fetchSchedule(childId, date);
+      if (generation !== epoch.current) return undefined;
+      const schedule = result ? scheduleFromApi(result, dataRef.current.activities) : null;
+      setData((current) => schedule ? mergeSchedule(current, schedule) : { ...current, schedules: current.schedules.filter((item) => !(item.childId === childId && item.date === date)) }); return schedule;
+    } catch (error) { if (generation === epoch.current) setMessage(messageOf(error)); return undefined; }
+  }, [fetchSchedule]);
+  useEffect(() => {
+    if (!token || !selectedChildId || loading || loadError) return;
+    const generation = epoch.current; const revision = cardRevisions.current.get(selectedChildId) ?? 0; let cancelled = false;
+    void api.cards(selectedChildId).then((groups) => { if (!cancelled && generation === epoch.current && revision === (cardRevisions.current.get(selectedChildId) ?? 0)) setData((current) => ({ ...current, cards: { ...current.cards, [selectedChildId]: Object.values(groups).flat() } })); }).catch((error) => { if (!cancelled && generation === epoch.current) setMessage(messageOf(error)); });
+    return () => { cancelled = true; };
+  }, [api, token, selectedChildId, loading, loadError]);
+  async function perform(work: () => Promise<(current: AppData) => AppData>): Promise<boolean> {
+    if (busyRef.current) return false;
+    const generation = epoch.current; busyRef.current = true; setBusy(true); setMessage('');
+    try { const update = await work(); if (generation !== epoch.current) return false; setData(update); return true; }
+    catch (error) { if (generation === epoch.current) setMessage(messageOf(error)); return false; }
+    finally { if (generation === epoch.current) { busyRef.current = false; setBusy(false); } }
   }
-
+  const refreshNumbers = useRef(new Map<number, number>());
+  function refreshProgress(childId: number) {
+    const generation = epoch.current;
+    const revision = (refreshNumbers.current.get(childId) ?? 0) + 1;
+    refreshNumbers.current.set(childId, revision);
+    void api.progress(childId).then((progress) => { if (generation === epoch.current && refreshNumbers.current.get(childId) === revision) setData((current) => ({ ...current, progress: { ...current.progress, [childId]: progress } })); }).catch((error) => { if (generation === epoch.current) setMessage(`Saved, but progress could not refresh: ${messageOf(error)}`); });
+  }
+  function refreshAfter(childId: number, work: () => Promise<(current: AppData) => AppData>) {
+    return perform(work).then((ok) => { if (ok) refreshProgress(childId); return ok; });
+  }
+  function mergeCard(current: AppData, childId: number, card: NonNullable<AppData['cards'][number]>[number]) {
+    return { ...current, cards: { ...current.cards, [childId]: [...(current.cards[childId] ?? []).filter((item) => item.id !== card.id), card] } };
+  }
   const actions: AppActions = {
-    navigate,
-    openChild: (childId) => { setSelectedChildId(childId); navigate('child'); },
-    selectChild: setSelectedChildId,
-    addChild: (child) => { setData((current) => { const id = Math.max(0, ...current.children.map((item) => item.id)) + 1; setSelectedChildId(id); return { ...current, children: [...current.children, { ...child, id }] }; }); },
-    updateChild: (child) => setData((current) => ({ ...current, children: current.children.map((item) => item.id === child.id ? child : item) })),
-    deleteChild: (id) => { setData((current) => ({ ...current, children: current.children.filter((item) => item.id !== id), schedules: current.schedules.filter((item) => item.childId !== id) })); if (selectedChildId === id) setSelectedChildId(data.children.find((item) => item.id !== id)?.id ?? 0); },
-    updatePreferences: (preferences: Preferences) => setData((current) => ({ ...current, preferences })),
-    updateSchedule: (schedule) => setData((current) => ({ ...current, schedules: [...current.schedules.filter((item) => !(item.childId === schedule.childId && item.date === schedule.date)), schedule] })),
-    markTask: (childId, taskId, done, date = today) => setData((current) => ({ ...current, schedules: current.schedules.map((schedule) => schedule.childId === childId && schedule.date === date ? { ...schedule, tasks: schedule.tasks.map((task) => task.id === taskId ? { ...task, status: done ? 'done' : 'pending' } : task) } : schedule) })),
+    navigate, setNavigationGuard, selectChild: (id) => { if (id !== selectedChildId && !leaveGuard.current()) return; setSelectedChildId(id); }, loadSchedule,
+    openChild: (id) => { if (!leaveGuard.current()) return; void (async () => { const ok = await perform(async () => { const [child, schedule, groups] = await Promise.all([api.child(id), fetchSchedule(id, today), api.cards(id)]); return (current) => ({ ...(schedule ? mergeSchedule(current, scheduleFromApi(schedule, current.activities)) : { ...current, schedules: current.schedules.filter((item) => !(item.childId === id && item.date === today)) }), children: current.children.map((item) => item.id === id ? childFromApi(child) : item), cards: { ...current.cards, [id]: Object.values(groups).flat() } }); }); if (ok) { setSelectedChildId(id); navigate('child', true); } })(); },
+    addChild: async (input) => { let id = 0; const ok = await perform(async () => { const child = await api.createChild(childToApi(input)); id = child.id; return (current) => ({ ...current, children: [...current.children, childFromApi(child)] }); }); if (ok) { setSelectedChildId(id); refreshProgress(id); } return ok; },
+    updateChild: (input) => perform(async () => { const child = await api.updateChild(input.id, childToApi(input)); return (current) => ({ ...current, children: current.children.map((item) => item.id === child.id ? childFromApi(child) : item) }); }),
+    deleteChild: async (id) => { const ok = await perform(async () => { await api.deleteChild(id); return (current) => ({ ...current, children: current.children.filter((child) => child.id !== id), schedules: current.schedules.filter((item) => item.childId !== id), cards: Object.fromEntries(Object.entries(current.cards).filter(([key]) => Number(key) !== id)), progress: Object.fromEntries(Object.entries(current.progress).filter(([key]) => Number(key) !== id)) }); }); if (ok && selectedChildId === id) setSelectedChildId(data.children.find((child) => child.id !== id)?.id ?? 0); return ok; },
+    updatePreferences: (preferences, name) => perform(async () => { const generation = epoch.current; const user = name === undefined ? data.user : await api.updateProfile(name); if (generation === epoch.current) setData((current) => ({ ...current, user })); try { const settings = await api.updateSettings(preferencesToApi(preferences)); return (current) => ({ ...current, user, preferences: preferencesFromApi(settings) }); } catch (error) { throw new Error(`Profile saved. Preferences could not be saved: ${messageOf(error)}`); } }),
+    updateSchedule: async (draft, original) => { let saved: DailySchedule | undefined; const ok = await refreshAfter(draft.childId, async () => { const result = await api.saveSchedule(draftToApi(draft, original)); saved = scheduleFromApi(result, dataRef.current.activities); return (current) => mergeSchedule(current, saved!); }); return ok ? saved : undefined; },
+    copySchedule: (childId, date, from) => refreshAfter(childId, async () => { const saved = await api.createSchedule(childId, date, from); return (current) => mergeSchedule(current, scheduleFromApi(saved, current.activities)); }),
+    moveSchedule: (schedule, date) => refreshAfter(schedule.childId, async () => { const moved = await api.moveSchedule(Number(schedule.id), date); return (current) => mergeSchedule({ ...current, schedules: current.schedules.filter((item) => item.id !== schedule.id) }, scheduleFromApi(moved, current.activities)); }),
+    deleteSchedule: (schedule) => refreshAfter(schedule.childId, async () => { await api.deleteSchedule(Number(schedule.id)); return (current) => ({ ...current, schedules: current.schedules.filter((item) => item.id !== schedule.id) }); }),
+    markTask: (childId, taskId, done, date = today) => refreshAfter(childId, async () => { const task = await api.completeTask(Number(taskId), done); return (current) => ({ ...current, schedules: current.schedules.map((schedule) => schedule.childId === childId && schedule.date === date ? { ...schedule, tasks: schedule.tasks.map((item) => item.id === taskId ? taskFromApi(task, current.activities) : item) } : schedule) }); }),
+    addTask: (schedule, activityId) => refreshAfter(schedule.childId, async () => { const task = await api.createTask(Number(schedule.id), Number(activityId)); return (current) => ({ ...current, schedules: current.schedules.map((item) => item.id === schedule.id ? { ...item, tasks: [...item.tasks, taskFromApi(task, current.activities)] } : item) }); }),
+    moveTask: (schedule, taskId, position) => perform(async () => { const task = await api.updateTask(Number(taskId), { position }); return (current) => ({ ...current, schedules: current.schedules.map((item) => { if (item.id !== schedule.id) return item; const tasks = item.tasks.filter((entry) => entry.id !== taskId); tasks.splice(task.position - 1, 0, taskFromApi(task, current.activities)); return { ...item, tasks }; }) }); }),
+    removeTask: (schedule, taskId) => refreshAfter(schedule.childId, async () => { await api.deleteTask(Number(taskId)); return (current) => ({ ...current, schedules: current.schedules.map((item) => item.id === schedule.id ? { ...item, tasks: item.tasks.filter((task) => task.id !== taskId) } : item) }); }),
+    addCard: (input) => perform(async () => { const card = await api.createCard(input); cardRevisions.current.set(input.childId, (cardRevisions.current.get(input.childId) ?? 0) + 1); return (current) => mergeCard(current, input.childId, card); }),
+    hideCard: (childId, id, hidden) => perform(async () => { const card = await api.hideCard(id, hidden); cardRevisions.current.set(childId, (cardRevisions.current.get(childId) ?? 0) + 1); return (current) => mergeCard(current, childId, card); }),
+    deleteCard: (childId, id) => perform(async () => { await api.deleteCard(id); cardRevisions.current.set(childId, (cardRevisions.current.get(childId) ?? 0) + 1); return (current) => ({ ...current, cards: { ...current.cards, [childId]: (current.cards[childId] ?? []).filter((card) => card.id !== id) } }); }),
   };
-
   const rootClass = `app-root font-${data.preferences.fontSize} contrast-${data.preferences.contrast}`;
-  if (page === 'login' || page === 'register') return <div className={rootClass}><AuthScreen page={page} onPage={navigate} onLogin={() => navigate('dashboard')} /></div>;
-  if (page === 'child') return <div className={rootClass}><ChildView data={data} selectedChildId={selectedChildId} today={today} actions={actions} /></div>;
-
-  return <div className={rootClass}>
-    <header className="staff-header"><Brand /><span className="staff-workspace-label">Staff workspace</span><div className="staff-account"><span>{staffName}</span><span>Caregiver</span></div><button className="button button-outline staff-logout" onClick={() => navigate('login')}>Log out</button><button className="button button-outline staff-menu-button" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? 'Close' : 'Menu'}</button></header>
-    <div className="staff-layout"><nav className={`staff-nav ${menuOpen ? 'open' : ''}`} aria-label="Staff navigation"><div className="staff-nav-items">{navItems.map((item) => <button className={`staff-nav-link ${(page === item.page || (item.page === 'schedules' && page === 'tasks')) ? 'active' : ''}`} key={item.page} onClick={() => navigate(item.page)}><span className="staff-nav-icon"><img src={item.icon} alt="" /></span><span>{item.label}</span></button>)}<p>A clear day,<br />one step at a time.</p></div></nav>
-      <main className="staff-main">{(page === 'schedules' || page === 'tasks') ? <SchedulePages page={page} data={data} selectedChildId={selectedChildId} today={today} actions={actions} /> : <StaffPages page={page} data={data} selectedChildId={selectedChildId} today={today} actions={actions} />}</main>
-    </div>
-  </div>;
+  const banner = message && <div className="auth-error" role="alert"><p>{message}</p><button className="button button-outline" onClick={() => setMessage('')}>Dismiss</button><button className="button button-outline" onClick={() => { if (window.confirm('Reload saved data? Unsaved drafts will be discarded.')) { setMessage(''); setRetry((value) => value + 1); } }}>Reload saved data</button></div>;
+  if (!token || page === 'login' || page === 'register') return <div className={rootClass}>{banner}<AuthScreen key={page} page={page === 'register' ? 'register' : 'login'} onPage={navigate} onLogin={(value, remember) => { const previous = tokenRef.current; epoch.current++; tokenRef.current = value; setLoading(true); if (!writeToken(value, remember, previous)) setMessage('Signed in for this tab only. Browser storage is unavailable.'); setData(emptyData()); setToken(value); navigate('dashboard'); }} /></div>;
+  if (loading || loadError || !data.user) return <main className={rootClass} aria-busy={loading}><div className="staff-main"><Brand /><p role={loadError ? 'alert' : 'status'}>{loadError || 'Loading your workspace…'}</p>{!loading && <button className="button button-primary" onClick={() => setRetry((value) => value + 1)}>Retry</button>}<button className="button button-outline" onClick={() => logout()}>Log out</button></div></main>;
+  const content = page === 'child' ? <ChildView data={data} selectedChildId={selectedChildId} today={today} actions={actions} /> : <>
+    <header className="staff-header"><Brand /><span className="staff-workspace-label">Staff workspace</span><div className="staff-account"><span>{data.user.name}</span><span>{data.user.role === 'caregiver' ? 'Caregiver' : data.user.role === 'ot' ? 'OT' : 'SPED Teacher'}</span></div><button className="button button-outline staff-logout" onClick={() => logout()}>Log out</button><button className="button button-outline staff-menu-button" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? 'Close' : 'Menu'}</button></header>
+    <div className="staff-layout"><nav className={`staff-nav ${menuOpen ? 'open' : ''}`} aria-label="Staff navigation"><div className="staff-nav-items">{navItems.map((item) => <button className={`staff-nav-link ${page === item.page || item.page === 'schedules' && page === 'tasks' ? 'active' : ''}`} key={item.page} onClick={() => navigate(item.page)}><span className="staff-nav-icon"><img src={item.icon} alt="" /></span><span>{item.label}</span></button>)}<button className="button button-outline" onClick={() => logout()}>Log out</button></div></nav><main className="staff-main">{page === 'schedules' || page === 'tasks' ? <SchedulePages key={selectedChildId} page={page} data={data} selectedChildId={selectedChildId} today={today} actions={actions} /> : <StaffPages page={page} data={data} selectedChildId={selectedChildId} today={today} actions={actions} />}</main></div>
+  </>;
+  return <div className={rootClass} aria-busy={busy}>{banner}{busy && <div className="request-status" role="status">Saving…</div>}<fieldset className="workspace-lock" disabled={busy}>{content}</fieldset></div>;
 }

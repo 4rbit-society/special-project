@@ -7,7 +7,20 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       port: 5173,
-      proxy: { '/api': env.API_PROXY_TARGET || 'http://localhost:3001' },
+      proxy: {
+        '/api': {
+          target: env.API_PROXY_TARGET || 'http://localhost:3001',
+          changeOrigin: true,
+          configure(proxy) {
+            proxy.on('error', (_error, _request, response) => {
+              if ('writeHead' in response && !response.headersSent && !response.writableEnded) {
+                response.writeHead(503, { 'Content-Type': 'application/json' });
+                response.end(JSON.stringify({ error: 'The app server is unavailable. Please try again shortly.' }));
+              }
+            });
+          },
+        },
+      },
     },
   };
 });

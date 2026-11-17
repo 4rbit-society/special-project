@@ -34,6 +34,16 @@ async function buildDay(childId: number, date: string, total: number, done: numb
 beforeEach(() => resetStore());
 
 describe('GET /api/progress/:childId (task 5.3)', () => {
+  it('uses the requested calendar day when local today differs from UTC', async () => {
+    const date = isoDay(1);
+    await buildDay(1, date, 1, 1);
+    const res = await request(app).get('/api/progress/1').set(alice).query({ date });
+    expect(res.status).toBe(200);
+    expect(res.body.today).toMatchObject({ date, total: 1, done: 1 });
+    expect(res.body.recent_completions).toHaveLength(1);
+    expect((await request(app).get('/api/progress/1').set(alice).query({ date: '2026-02-30' })).status).toBe(400);
+  });
+
   it('requires a valid token', async () => {
     const res = await request(app).get('/api/progress/1').query({ range: '7d' });
     expect(res.status).toBe(401);

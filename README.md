@@ -6,7 +6,7 @@ An npm workspace with React + Vite, Express, and a shared types package. Require
 
 The responsive frontend follows the [Araw Figma design](https://www.figma.com/design/LIUnykdWEJ139auGBKjTUs/SRS-v2?node-id=26-3). It includes the staff dashboard, child profiles, schedule editor, task status, progress, settings, picture card management, and the child schedule and communication board. Figma SVG assets and Nunito fonts are bundled locally.
 
-Run the frontend alone without MySQL or the API:
+Start the frontend development server:
 
 ```sh
 npm ci
@@ -15,7 +15,7 @@ npm run dev -w @starter/web
 
 Open http://localhost:5173. On PowerShell systems that block `npm.ps1`, use `npm.cmd` instead of `npm`.
 
-This frontend currently uses demo profiles (Mika, Leo and Ari) and stores edits in browser local storage. Login and registration demonstrate the UI only. The backend endpoints described below are separate and are not connected to these screens yet. The communication board uses the browser's speech synthesis when available.
+The screens now use the authenticated backend for profiles, schedules/tasks, cards, progress and settings. Start MySQL and the API using the setup below before logging in. Register a real account; the old frontend demo data is not imported. Tokens are stored in session storage by default or local storage when Remember me is selected; logout clears the current session and discards cached user data, while preserving a newer account session in another tab. Expired sessions return to login. The communication board uses browser speech synthesis when available. Schedule/progress calendar dates use the browser's local day; completion timestamps are stored in UTC.
 
 Verify the frontend with `npm run typecheck -w @starter/web` and `npm run build -w @starter/web`.
 
@@ -37,7 +37,8 @@ apps/
     tsconfig.json
   web/
     src/
-      lib/api.ts        # Typed API client
+      lib/client.ts     # Authenticated API client and public errors
+      lib/adapters.ts   # API/UI field and ID conversion
       App.tsx
       main.tsx
       styles.css
@@ -79,7 +80,10 @@ The seed-only demo caregiver has no login password; create a normal account to u
 - `npm run build`: compile shared schemas and the API, then build the frontend.
 - `npm run db:schema`: create the database tables (the database itself must already exist).
 - `npm run db:seed`: add the activity library, default cards, and demo schedules.
-- `npm test -w @starter/api`: run API tests.
+- `npm test -w @starter/api`: run isolated API unit tests without using application database credentials.
+- `npm run test:database -w @starter/api`: run database, schema, seed, and user repository tests against a dedicated `*_test` database.
+- `npm test -w @starter/web`: run frontend API-client and adapter tests.
+- `npm run test:e2e -w @starter/web`: run connected browser tests against a dedicated empty MySQL test database (see below).
 - `npm start`: run the compiled API after building.
 - `npm run preview -w @starter/web`: preview the frontend build locally (no development API proxy).
 
@@ -93,7 +97,7 @@ API failures expose an `error` string. Malformed JSON, malformed route parameter
 
 ### Child profiles, activities, schedules and tasks
 
-The API persists child, activity, schedule and task data in MySQL. Progress reads those same records. Child, schedule and task queries are scoped to the authenticated user's ID, and deleting a child relies on the schema's foreign-key cascades. Requests use the real JWT middleware. API unit tests use the in-memory mock store only when running under Vitest without database configuration. Task completion timestamps are stored and returned in UTC; progress groups schedules by UTC calendar date. Schedule creation and task copying commit together. See [the backend plan](docs/BACKEND_TASKS.md).
+The API persists child, activity, schedule and task data in MySQL. Progress reads those same records. Child, schedule and task queries are scoped to the authenticated user's ID, and deleting a child relies on the schema's foreign-key cascades. Requests use the real JWT middleware. API unit tests use the in-memory mock store only when running under Vitest without database configuration. Task completion timestamps are stored and returned in UTC; the browser passes its local calendar date to progress (API clients that omit `date` retain the UTC default). Schedule creation and task copying commit together. See [the backend plan](docs/BACKEND_TASKS.md).
 
 | Method and path | Response |
 | --- | --- |
@@ -114,7 +118,7 @@ Example create body:
 
 The current validation choices are: trimmed name (1–100 characters), integer age (0–120), delay domain (`speech`, `motor`, `cognitive`, `social`, `general`), optional notes (up to 2,000 characters, or `null` to clear), and an optional avatar (`🦊`, `🐼`, `🐰`, `🐻`, `🐱`, `🐶`; defaults to `🦊` on create). A partial update preserves omitted fields. Shared TypeScript contracts are in [the shared package](packages/shared/src/index.ts); runtime schemas live in [the shared schemas](packages/shared/src/schemas.ts).
 
-Run API tests with `npm test -w @starter/api`. Database schema, seed and user-repository tests require `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and a dedicated `special_project_test` database; these tests reset that test database. CI runs these files separately from the tests that use mocks.
+Run isolated API unit tests with `npm test -w @starter/api`. Run database schema, seed, connection, and user-repository tests with `npm run test:database -w @starter/api`. Configure `DB_TEST_HOST`, `DB_TEST_PORT`, `DB_TEST_USER`, `DB_TEST_PASSWORD`, and `DB_TEST_NAME` in `apps/api/.env.test` or the shell. Explicit `DB_*` environment variables are also supported for this database-only command. The selected database name must end in `_test`; these tests reset its tables. Unit tests ignore database credentials and never load the normal application `.env`.
 
 For MySQL-backed ownership, persistence, activity-library, progress and child-cascade coverage, configure `DB_TEST_HOST`, `DB_TEST_PORT`, `DB_TEST_USER`, `DB_TEST_PASSWORD`, and `DB_TEST_NAME` (a dedicated, empty database whose name ends in `_test`), then run `npm run test:integration -w @starter/api`. This command builds and launches the compiled API, checks persistence across a process restart, and checks that a failed schedule copy rolls back. The integration suite applies the schema without dropping tables and deletes only its own fixtures. Missing configuration fails the command. CI runs this suite before the database-resetting tests.
 
@@ -134,6 +138,23 @@ Custom cards and settings use parameterized MySQL access. The card schema includ
 
 Add API routes under `apps/api/src/routes`, UI components under `apps/web/src/components`, and shared contracts and Zod schemas under `packages/shared/src`. Use shared schemas at API boundaries to validate user input.
 
+### Connected workflows and browser tests
+
+All 26 existing API method/path combinations are used by frontend workflows. `PUT /api/schedules` adds an atomic editor save: new schedule creation, task additions/removals, ordering and timing commit together. The client submits the loaded task ID order as `expectedTaskIds`; changes to task membership/order return 409 rather than overwriting another editor. Existing task completion is preserved. See [the endpoint cross-reference](docs/ENDPOINT_CROSS_REFERENCE.md) for every call site.
+
+Schedule drafts stay in memory until the server confirms a save. Preview is read-only and keeps the editor draft/date. Task status provides immediate add, move, remove, complete and undo operations. Schedule date changes and deletion are explicit saved-data actions. Card administration exposes hide/show/delete for owned custom cards; shared defaults cannot be changed.
+
+Browser tests require `DB_TEST_HOST`, `DB_TEST_PORT`, `DB_TEST_USER`, `DB_TEST_PASSWORD`, and `DB_TEST_NAME` ending in `_test`. Use a dedicated database without users, distinct from normal application/test-suite data. Explicit environment variables override `apps/api/.env.test`. The runner refuses existing users, applies schema/seeds, starts the compiled API on 13001 and Vite on 15173, and cleans up only that run's users and its seed caregiver. It can create a missing test database if the account has permission; otherwise create it first. Never supply a production database.
+
+```sh
+npx playwright install chromium
+npm run test:e2e -w @starter/web
+```
+
+Set `E2E_BROWSER_CHANNEL=chrome` to use an installed Chrome instead. CI installs Chromium and runs both client unit tests and connected browser tests. Coverage includes all 27 method/path combinations, save failure recovery, expired-session handling, reload persistence, a 390px mobile flow, and account isolation. This does not certify every browser, speech voice, or accessibility/performance target.
+
 ## Deployment
 
 Serve `apps/web/dist` using a static host and run the API with `npm start`. Configure a reverse proxy to forward `/api` to the backend on the same origin. For separate origins, set `VITE_API_BASE_URL` before building the frontend and configure explicit CORS permissions on the API. Vite environment variables are public build-time values; keep secrets in the backend environment.
+
+See [the polish and debugging review](docs/POLISH_REVIEW.md) for the reproduced bugs, fixes, and validation limits.

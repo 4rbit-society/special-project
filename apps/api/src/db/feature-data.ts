@@ -245,7 +245,7 @@ export async function createSchedule(childId: number, date: string, copyFromId?:
     await connection.beginTransaction();
     if (copyFromId !== undefined) {
       const [sources] = await connection.query<RowDataPacket[]>(
-        'SELECT id FROM schedules WHERE id = ? AND child_id = ? FOR SHARE',
+        'SELECT id FROM schedules WHERE id = ? AND child_id = ? LOCK IN SHARE MODE',
         [copyFromId, childId],
       );
       if (sources.length === 0) throw new HttpError(404, 'No schedule found to copy from');

@@ -12,28 +12,29 @@ describe('/api/settings', () => {
   it('returns defaults and persists updates independently per user', async () => {
     const initial = await request(app).get('/api/settings').set(alice);
     expect(initial.status).toBe(200);
-    expect(initial.body).toEqual({ font_size: 'medium', contrast: 'normal', sound_on: true });
+    expect(initial.body).toEqual({ font_size: 'medium', contrast: 'normal', sound_on: true, voice_speed: 'normal' });
 
     const updated = await request(app)
       .put('/api/settings')
       .set(alice)
-      .send({ font_size: 'large', contrast: 'high', sound_on: false });
+      .send({ font_size: 'large', contrast: 'high', sound_on: false, voice_speed: 'fast' });
     expect(updated.status).toBe(200);
-    expect(updated.body).toEqual({ font_size: 'large', contrast: 'high', sound_on: false });
+    expect(updated.body).toEqual({ font_size: 'large', contrast: 'high', sound_on: false, voice_speed: 'fast' });
 
     const persisted = await request(app).get('/api/settings').set(alice);
     expect(persisted.body).toEqual(updated.body);
     const otherUser = await request(app).get('/api/settings').set(bob);
-    expect(otherUser.body).toEqual({ font_size: 'medium', contrast: 'normal', sound_on: true });
+    expect(otherUser.body).toEqual({ font_size: 'medium', contrast: 'normal', sound_on: true, voice_speed: 'normal' });
   });
 
   it('requires authentication and rejects invalid settings', async () => {
     const missingAuth = await request(app).get('/api/settings');
     expect(missingAuth.status).toBe(401);
     for (const body of [
-      { font_size: 'extra-large', contrast: 'normal', sound_on: true },
-      { font_size: 'small', contrast: 'low', sound_on: true },
-      { font_size: 'small', contrast: 'high', sound_on: 'yes' },
+      { font_size: 'extra-large', contrast: 'normal', sound_on: true, voice_speed: 'normal' },
+      { font_size: 'small', contrast: 'low', sound_on: true, voice_speed: 'normal' },
+      { font_size: 'small', contrast: 'high', sound_on: 'yes', voice_speed: 'normal' },
+      { font_size: 'small', contrast: 'high', sound_on: true, voice_speed: 'slower' },
       { font_size: 'small', contrast: 'high' },
     ]) {
       const invalid = await request(app).put('/api/settings').set(alice).send(body);

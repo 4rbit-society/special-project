@@ -21,6 +21,14 @@ async function applySchema(): Promise<void> {
           'ALTER TABLE picture_cards ADD COLUMN is_hidden BOOLEAN NOT NULL DEFAULT FALSE',
         );
       }
+      const [voiceSpeedColumns] = await connection.query<RowDataPacket[]>(
+        "SHOW COLUMNS FROM settings LIKE 'voice_speed'",
+      );
+      if (voiceSpeedColumns.length === 0) {
+        await connection.query(
+          "ALTER TABLE settings ADD COLUMN voice_speed ENUM('slow', 'normal', 'fast') NOT NULL DEFAULT 'normal' AFTER sound_on",
+        );
+      }
     } finally {
       connection.release();
     }

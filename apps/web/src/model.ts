@@ -1,4 +1,4 @@
-import type { ApiCard, ProgressSummary, PublicUser } from '@starter/shared';
+import type { ActivityProgressSummary, ApiCard, ProgressRange, ProgressSummary, PublicUser } from '@starter/shared';
 
 export type StaffPage = 'dashboard' | 'profiles' | 'schedules' | 'tasks' | 'progress' | 'settings' | 'cards';
 export type Page = StaffPage | 'child' | 'login' | 'register';
@@ -36,6 +36,7 @@ export interface Preferences {
   fontSize: 'small' | 'medium' | 'large';
   contrast: 'normal' | 'high';
   soundOn: boolean;
+  voiceSpeed: 'slow' | 'normal' | 'fast';
 }
 
 export interface AppData {
@@ -69,6 +70,7 @@ export interface AppActions {
   addCard: (input: { childId: number; label: string; category: ApiCard['category']; icon: string }) => Promise<boolean>;
   hideCard: (childId: number, id: number, hidden: boolean) => Promise<boolean>;
   deleteCard: (childId: number, id: number) => Promise<boolean>;
+  activityProgress: (childId: number, range: ProgressRange) => Promise<ActivityProgressSummary | undefined>;
 }
 
 export interface SharedPageProps {

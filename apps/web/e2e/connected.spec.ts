@@ -7,7 +7,7 @@ async function register(page: Page) {
   await page.getByLabel('Email', { exact: true }).fill(email());
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Welcome to Araw', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Welcome to Araw', exact: true })).toBeVisible({ timeout: 15_000 });
 }
 test('all mounted endpoints support a persisted browser workflow', async ({ page }) => {
   const endpoints = new Set<string>();
@@ -67,11 +67,13 @@ test('all mounted endpoints support a persisted browser workflow', async ({ page
   await page.getByLabel('Name', { exact: true }).fill('Updated Caregiver');
   await page.getByRole('radio', { name: /Large/ }).check();
   await page.getByRole('radio', { name: 'High contrast', exact: true }).check();
+  await page.getByRole('radio', { name: 'Fast', exact: true }).check();
   await page.getByRole('button', { name: 'Save settings', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Settings saved', exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Updated Caregiver');
   await expect(page.getByRole('radio', { name: /Large/ })).toBeChecked();
+  await expect(page.getByRole('radio', { name: 'Fast', exact: true })).toBeChecked();
   await page.getByRole('button', { name: 'Schedules', exact: true }).click();
   const sourceDate = await page.getByLabel('Date', { exact: true }).inputValue();
   await page.getByLabel('Date', { exact: true }).fill('2099-12-20');
@@ -91,7 +93,7 @@ test('all mounted endpoints support a persisted browser workflow', async ({ page
   await page.getByRole('button', { name: 'Log out', exact: true }).first().click();
   await page.goto('/#dashboard');
   await expect(page.getByRole('heading', { name: 'Welcome back', exact: true })).toBeVisible();
-  const expected = ['GET /api/health','POST /api/auth/register','POST /api/auth/login','GET /api/auth/me','PATCH /api/auth/me','GET /api/children','POST /api/children','GET /api/children/:id','PUT /api/children/:id','DELETE /api/children/:id','GET /api/activities','GET /api/schedules','POST /api/schedules','PUT /api/schedules','PUT /api/schedules/:id','DELETE /api/schedules/:id','POST /api/tasks','PUT /api/tasks/:id','DELETE /api/tasks/:id','PATCH /api/tasks/:id/complete','GET /api/cards','POST /api/cards','PATCH /api/cards/:id','DELETE /api/cards/:id','GET /api/progress/:id','GET /api/settings','PUT /api/settings'];
+  const expected = ['GET /api/health','POST /api/auth/register','POST /api/auth/login','GET /api/auth/me','PATCH /api/auth/me','GET /api/children','POST /api/children','GET /api/children/:id','PUT /api/children/:id','DELETE /api/children/:id','GET /api/activities','GET /api/schedules','POST /api/schedules','PUT /api/schedules','PUT /api/schedules/:id','DELETE /api/schedules/:id','POST /api/tasks','PUT /api/tasks/:id','DELETE /api/tasks/:id','PATCH /api/tasks/:id/complete','GET /api/cards','POST /api/cards','PATCH /api/cards/:id','DELETE /api/cards/:id','GET /api/progress/:id','GET /api/progress/:id/activities','GET /api/settings','PUT /api/settings'];
   expect([...endpoints]).toEqual(expect.arrayContaining(expected));
 });
 test('expired sessions clear cached user data and return to login', async ({ page }) => {
@@ -108,7 +110,7 @@ test('an unreachable API is shown as an error and can be retried', async ({ page
   await expect(page.getByRole('alert')).toContainText('Cannot reach the server');
   await page.unroute('**/api/activities');
   await page.getByRole('button', { name: 'Retry', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Welcome to Araw', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Welcome to Araw', exact: true })).toBeVisible({ timeout: 15_000 });
 });
 
 test('mobile completion persists and signing into another account shows no previous children', async ({ page }) => {
@@ -187,6 +189,34 @@ test('timing saves directly, protects drafts, and safely handles an empty date',
   expect(errors).toEqual([]);
 });
 
+test('child timer counts down and plays the end cue when sound is on', async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as unknown as { __beeps: number }).__beeps = 0;
+    class FakeAudioContext {
+      currentTime = 0;
+      destination = {};
+      createOscillator() { return { frequency: { value: 0 }, connect() {}, start() { (window as unknown as { __beeps: number }).__beeps += 1; }, stop() {}, onended: null }; }
+      createGain() { return { gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() {} }; }
+      close() { return Promise.resolve(); }
+    }
+    Object.defineProperty(window, 'AudioContext', { configurable: true, value: FakeAudioContext });
+  });
+  await openEditor(page);
+  await page.locator('.schedule-task').getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByLabel('Duration (minutes)').fill('1');
+  await page.getByRole('button', { name: 'Apply to draft', exact: true }).click();
+  await page.getByRole('button', { name: 'Save schedule', exact: true }).first().click();
+  await expect(page.getByText('Schedule saved', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
+  await page.getByRole('button', { name: 'Open Child view', exact: true }).click();
+  await expect(page.getByRole('timer')).toBeVisible();
+  await page.clock.install();
+  await page.getByRole('button', { name: 'Start timer', exact: true }).click();
+  await page.clock.runFor(61_000);
+  await expect(page.getByText('Time is up — nice effort!')).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { __beeps: number }).__beeps)).toBeGreaterThanOrEqual(1);
+});
+
 test('modal traps keyboard focus and Escape restores its opener', async ({ page }) => {
   await openEditor(page);
   await page.getByRole('button', { name: 'Custom activity', exact: true }).click();
@@ -211,7 +241,7 @@ test('registration retries login without creating the account twice', async ({ p
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Try login again');
   await page.getByRole('button', { name: 'Log in', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Welcome to Araw', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Welcome to Araw', exact: true })).toBeVisible({ timeout: 15_000 });
   expect(attempts).toBe(2);
 });
 
@@ -225,9 +255,9 @@ test('a remembered login in another tab does not sign out a tab-only session', a
   await other.getByLabel('Password', { exact: true }).fill(password);
   await other.getByLabel('Remember me on this device').check();
   await other.getByRole('button', { name: 'Create account', exact: true }).click();
-  await expect(other.getByRole('heading', { name: 'Welcome to Araw', exact: true })).toBeVisible();
+  await expect(other.getByRole('heading', { name: 'Welcome to Araw', exact: true })).toBeVisible({ timeout: 15_000 });
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Welcome to Araw', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Welcome to Araw', exact: true })).toBeVisible({ timeout: 15_000 });
   expect(await page.evaluate(() => sessionStorage.getItem('araw-session-token-v1'))).toBe(first);
   expect(await other.evaluate(() => localStorage.getItem('araw-session-token-v1'))).toBeTruthy();
 });

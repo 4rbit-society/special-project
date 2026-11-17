@@ -11,6 +11,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   font_size: 'medium',
   contrast: 'normal',
   sound_on: true,
+  voice_speed: 'normal',
 };
 
 export class InMemoryGroup5Repository implements Group5Repository {

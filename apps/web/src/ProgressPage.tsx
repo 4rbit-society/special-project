@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { ActivityProgressSummary, ProgressRange } from '@starter/shared';
 import type { SharedPageProps } from './model';
 import './progress.css';
 
@@ -9,7 +10,21 @@ export function ProgressPage({ data, selectedChildId, actions }: SharedPageProps
   const child = data.children.find((item) => item.id === selectedChildId) ?? data.children[0];
   const progress = child ? data.progress[child.id] : undefined;
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [range, setRange] = useState<ProgressRange>('7d');
+  const [activityProgress, setActivityProgress] = useState<ActivityProgressSummary>();
   useEffect(() => setSelectedDate(null), [child?.id, progress?.today.date]);
+  useEffect(() => {
+    if (!child) {
+      setActivityProgress(undefined);
+      return;
+    }
+    let cancelled = false;
+    setActivityProgress(undefined);
+    void actions.activityProgress(child.id, range).then((result) => {
+      if (!cancelled) setActivityProgress(result);
+    });
+    return () => { cancelled = true; };
+  }, [child?.id, range]);
 
   if (!child) return <section className="staff-page progress-page"><h1>Progress</h1><div className="progress-empty staff-panel">
     <img src="/assets/staff-form-sun.svg" alt="" /><h2>A little progress starts here</h2>
@@ -27,14 +42,22 @@ export function ProgressPage({ data, selectedChildId, actions }: SharedPageProps
   const todayPercent = progress.today.total ? Math.round(progress.today.done / progress.today.total * 100) : 0;
   const selected = days.find((day) => day.date === selectedDate);
   const completions = progress.recent_completions.filter((task) => !selectedDate || task.schedule_date === selectedDate);
-  const range = days.length ? `${calendarDate(days[0]!.date, { day: 'numeric', month: 'short' })} – ${calendarDate(days[days.length - 1]!.date, { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Last 7 days';
+  const dateRangeLabel = days.length ? `${calendarDate(days[0]!.date, { day: 'numeric', month: 'short' })} – ${calendarDate(days[days.length - 1]!.date, { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Last 7 days';
+  const rankedActivities = [...(activityProgress?.activities ?? [])].sort((a, b) => b.percentage - a.percentage || b.completed - a.completed || b.total - a.total || a.name.localeCompare(b.name));
+  const mostCompleted = rankedActivities.filter((item) => item.completed > 0).slice(0, 3);
+  const leastCompleted = [...rankedActivities].filter((item) => item.percentage < 100).sort((a, b) => a.percentage - b.percentage || a.completed - b.completed || b.total - a.total || a.name.localeCompare(b.name)).slice(0, 3);
+  const activityRow = (item: ActivityProgressSummary['activities'][number], section: string) => <li key={`${section}-${item.name}`}>
+    <span className="progress-activity-icon" aria-hidden="true">{item.icon.startsWith('/assets/') ? <img src={item.icon} alt="" /> : item.icon}</span>
+    <div className="progress-activity-body"><strong>{item.name}</strong><span>{item.completed} of {item.total} done</span><span className="progress-activity-track"><span style={{ width: `${item.percentage}%` }} /></span></div>
+    <span className="progress-activity-percent">{item.percentage}%</span>
+  </li>;
 
   return <div className="staff-page staff-progress-page progress-page">
     <header className="progress-heading"><div><h1>Progress</h1><p>Small steps, one day at a time.</p></div>
       <label className="staff-field progress-child-select">Child<select value={child.id} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
     </header>
 
-    <div className="progress-week-heading"><div className="progress-child-identity"><span className="progress-avatar" aria-hidden="true">{child.avatar}</span><div><h2>{child.name}'s week</h2><p>{range}</p></div></div><span className="progress-period">Last 7 days</span></div>
+    <div className="progress-week-heading"><div className="progress-child-identity"><span className="progress-avatar" aria-hidden="true">{child.avatar}</span><div><h2>{child.name}'s week</h2><p>{dateRangeLabel}</p></div></div><span className="progress-period">Last 7 days</span></div>
 
     <div className="progress-metrics" aria-label="Weekly summary">
       <article className="progress-metric"><span className="progress-metric-icon blue" aria-hidden="true">↗</span><div><p>Weekly completion</p><strong>{total ? `${percent}%` : '—'}</strong><span>{total ? 'Across all scheduled activities' : 'No activities scheduled yet'}</span></div></article>
@@ -68,6 +91,17 @@ export function ProgressPage({ data, selectedChildId, actions }: SharedPageProps
         <button className="staff-button secondary" onClick={() => actions.navigate('schedules')}>View schedule</button>
       </aside>
     </div>
+
+    <section className="progress-activities staff-panel" aria-labelledby="progress-activities-title">
+      <div className="progress-section-heading">
+        <div><h2 id="progress-activities-title">Activity patterns</h2><p>Most and least completed over the selected period.</p></div>
+        <label className="staff-field progress-range">Period<select value={range} onChange={(event) => setRange(event.target.value as ProgressRange)}><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></select></label>
+      </div>
+      {!activityProgress ? <p role="status">Loading activity patterns…</p> : rankedActivities.length === 0 ? <p className="progress-activities-empty">Complete a few scheduled activities to see patterns here.</p> : <div className="progress-activity-grid">
+        <section aria-labelledby="most-completed-title"><h3 id="most-completed-title">Most completed</h3>{mostCompleted.length ? <ul className="progress-activity-list">{mostCompleted.map((item) => activityRow(item, 'most'))}</ul> : <p className="progress-activities-empty">No completed activities yet.</p>}</section>
+        <section aria-labelledby="least-completed-title"><h3 id="least-completed-title">Least completed</h3>{leastCompleted.length ? <ul className="progress-activity-list">{leastCompleted.map((item) => activityRow(item, 'least'))}</ul> : <p className="progress-activities-empty">Every scheduled activity is complete.</p>}</section>
+      </div>}
+    </section>
 
     <section className="progress-history staff-panel" aria-labelledby="progress-history-title"><div className="progress-section-heading"><div><h2 id="progress-history-title">Recent completions</h2><p>{selectedDate ? `For ${calendarDate(selectedDate, { weekday: 'long', day: 'numeric', month: 'long' })}` : 'A closer look at the steps they finished.'}</p></div><span className="progress-history-count">{completions.length} {completions.length === 1 ? 'activity' : 'activities'}</span></div>
       {completions.length ? <ul className="progress-history-list">{completions.map((task) => <li key={task.task_id}><span className="progress-history-icon" aria-hidden="true">{task.icon.startsWith('/assets/') ? <img src={task.icon} alt="" /> : task.icon}</span><div className="progress-history-description"><strong>{task.name}</strong><time dateTime={task.completed_at}>{new Date(task.completed_at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</time></div><span className="progress-done"><span aria-hidden="true">✓ </span>Done</span></li>)}</ul>

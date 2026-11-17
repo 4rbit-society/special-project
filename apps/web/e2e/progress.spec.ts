@@ -10,10 +10,19 @@ async function openProgress(page: Page, empty = false) {
     if (url.pathname === '/api/auth/me') body = { id: 1, name: 'Caregiver', email: 'preview@example.invalid', role: 'caregiver' };
     else if (url.pathname === '/api/children') body = children;
     else if (url.pathname === '/api/activities') body = [];
-    else if (url.pathname === '/api/settings') body = { font_size: 'medium', contrast: 'normal', sound_on: true };
+    else if (url.pathname === '/api/settings') body = { font_size: 'medium', contrast: 'normal', sound_on: true, voice_speed: 'normal' };
     else if (url.pathname === '/api/health') body = { status: 'ok', database: 'connected' };
     else if (url.pathname === '/api/cards') body = {};
     else if (url.pathname === '/api/schedules') { status = 404; body = { error: 'Schedule not found' }; }
+    else if (/^\/api\/progress\/\d+\/activities$/.test(url.pathname)) {
+      const childId = Number(url.pathname.split('/')[3]);
+      body = { child_id: childId, range: url.searchParams.get('range') ?? '7d', activities: childId === 1 ? [
+        { name: 'Brush teeth', icon: '🪥', total: 4, completed: 3, percentage: 75, last_completed_at: '2026-11-17T00:30:00Z' },
+        { name: 'Play', icon: '🧸', total: 3, completed: 1, percentage: 33, last_completed_at: '2026-11-16T06:00:00Z' },
+        { name: 'Read a book', icon: '📚', total: 2, completed: 2, percentage: 100, last_completed_at: '2026-11-15T06:00:00Z' },
+        { name: 'Wash hands', icon: '🧼', total: 2, completed: 0, percentage: 0, last_completed_at: null },
+      ] : [] };
+    }
     else if (url.pathname.startsWith('/api/progress/')) {
       const childId = Number(url.pathname.split('/').pop());
       const days = done.map((count, index) => ({ date: `2026-11-${index + 11}`, done: childId === 1 ? count : 0, total: childId === 1 ? totals[index] : 0, percentage: childId === 1 && totals[index] ? Math.round(count / totals[index]! * 100) : 0 }));
@@ -32,6 +41,11 @@ test('progress shows weighted totals and filters completion history by keyboard-
   await openProgress(page);
   await expect(page.locator('.progress-metric').first()).toContainText('55%');
   await expect(page.getByRole('progressbar', { name: "Today's completion" })).toHaveAttribute('aria-valuenow', '60');
+  await expect(page.getByRole('heading', { name: 'Activity patterns' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Most completed' }).locator('li').first()).toContainText('Read a book');
+  await expect(page.getByRole('region', { name: 'Least completed' }).locator('li').first()).toContainText('Wash hands');
+  await page.getByLabel('Period').selectOption('30d');
+  await expect(page.getByLabel('Period')).toHaveValue('30d');
   const day = page.getByRole('button', { name: /Tuesday 17 November: 3 of 5/ });
   await day.focus(); await page.keyboard.press('Enter');
   await expect(day).toHaveAttribute('aria-pressed', 'true');

@@ -4,7 +4,7 @@ import { asyncHandler, HttpError } from '../lib/errors.js';
 import { parse } from '../lib/validate.js';
 import { currentUser, requireAuth } from '../middleware/requireAuth.js';
 import * as data from '../db/feature-data.js';
-import { idParamSchema, progressQuerySchema } from '@starter/shared';
+import { activityProgressQuerySchema, idParamSchema, progressQuerySchema } from '@starter/shared';
 
 export function progressRouter(users: UserRepository): Router {
   const router = Router();
@@ -13,6 +13,23 @@ export function progressRouter(users: UserRepository): Router {
   function dateString(date: Date): string {
     return date.toISOString().slice(0, 10);
   }
+
+  router.get(
+    '/:childId/activities',
+    asyncHandler(async (req, res) => {
+      const { id: childId } = parse(idParamSchema, { id: req.params.childId });
+      const { range, date: requestedDate } = parse(activityProgressQuerySchema, req.query);
+      if (!(await data.findChildForUser(childId, currentUser(req).id))) {
+        throw new HttpError(404, 'Child not found');
+      }
+
+      const endDate = requestedDate ?? dateString(new Date());
+      const startDate = new Date(`${endDate}T00:00:00.000Z`);
+      startDate.setUTCDate(startDate.getUTCDate() - (range === '30d' ? 29 : 6));
+      const activities = await data.activityCompletionForChild(childId, dateString(startDate), endDate);
+      res.json({ child_id: childId, range, activities });
+    }),
+  );
 
   router.get(
     '/:childId',

@@ -107,3 +107,39 @@ describe('GET /api/progress/:childId (task 5.3)', () => {
     expect(foreign.status).toBe(404);
   });
 });
+
+describe('GET /api/progress/:childId/activities (FR-PROG-04)', () => {
+  it('ranks activities by completion for the selected period', async () => {
+    await buildDay(1, isoDay(-1), 4, 2);
+    await buildDay(1, isoDay(0), 2, 2);
+    const res = await request(app).get('/api/progress/1/activities').set(alice).query({ range: '7d', date: isoDay(0) });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ child_id: 1, range: '7d' });
+    const activities = res.body.activities as Array<{ name: string; total: number; completed: number; percentage: number; last_completed_at: string | null }>;
+    expect(activities.map((item) => item.name)).toEqual(['Brush teeth', 'Wake up', 'Eat breakfast', 'Wash hands']);
+    expect(activities[0]).toMatchObject({ total: 2, completed: 2, percentage: 100 });
+    expect(activities[2]).toMatchObject({ total: 1, completed: 0, percentage: 0, last_completed_at: null });
+    expect(Number.isNaN(Date.parse(activities[0]!.last_completed_at!))).toBe(false);
+  });
+
+  it('supports a 30-day period and excludes older schedules from the 7-day period', async () => {
+    await buildDay(1, isoDay(-10), 1, 1);
+    await buildDay(1, isoDay(0), 2, 2);
+    const week = await request(app).get('/api/progress/1/activities').set(alice).query({ range: '7d', date: isoDay(0) });
+    const month = await request(app).get('/api/progress/1/activities').set(alice).query({ range: '30d', date: isoDay(0) });
+    expect(week.status).toBe(200);
+    expect(month.status).toBe(200);
+    const weekWakeUp = (week.body.activities as Array<{ name: string; total: number }>).find((item) => item.name === 'Wake up');
+    const monthWakeUp = (month.body.activities as Array<{ name: string; total: number }>).find((item) => item.name === 'Wake up');
+    expect(weekWakeUp?.total).toBe(1);
+    expect(monthWakeUp?.total).toBe(2);
+    expect(month.body.range).toBe('30d');
+  });
+
+  it('validates the range, authentication and child ownership', async () => {
+    await buildDay(1, isoDay(0), 1, 0);
+    expect((await request(app).get('/api/progress/1/activities').query({ range: '7d' })).status).toBe(401);
+    expect((await request(app).get('/api/progress/1/activities').set(alice).query({ range: '1y' })).status).toBe(400);
+    expect((await request(app).get('/api/progress/1/activities').set(bob).query({ range: '7d' })).status).toBe(404);
+  });
+});

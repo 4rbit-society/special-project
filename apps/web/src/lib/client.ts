@@ -1,5 +1,5 @@
 import { localDate } from './date';
-import type { Activity, ApiCard, ApiSchedule, ApiSettings, ApiTask, Child, ChildProfileInput, HealthResponse, ProgressSummary, PublicUser, ScheduleDraftInput } from '@starter/shared';
+import type { ActivityProgressSummary, Activity, ApiCard, ApiSchedule, ApiSettings, ApiTask, Child, ChildProfileInput, HealthResponse, ProgressRange, ProgressSummary, PublicUser, ScheduleDraftInput } from '@starter/shared';
 
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) { super(message); this.name = 'ApiError'; }
@@ -62,6 +62,7 @@ export class ApiClient {
   hideCard = (id: number, hidden: boolean) => this.request<ApiCard>(`/cards/${id}`, 'PATCH', { hidden });
   deleteCard = (id: number) => this.request<{ success: true }>(`/cards/${id}`, 'DELETE');
   progress = (childId: number) => this.request<ProgressSummary>(`/progress/${childId}?range=7d&date=${localDate()}`);
+  activityProgress = (childId: number, range: ProgressRange) => this.request<ActivityProgressSummary>(`/progress/${childId}/activities?range=${range}&date=${localDate()}`);
   settings = () => this.request<ApiSettings>('/settings');
   updateSettings = (input: ApiSettings) => this.request<ApiSettings>('/settings', 'PUT', input);
 }

@@ -155,6 +155,28 @@ Set `E2E_BROWSER_CHANNEL=chrome` to use an installed Chrome instead. CI installs
 
 ## Deployment
 
+### Containers (MySQL + API + web)
+
+The repository includes `Dockerfile` (API), `Dockerfile.web` (static web through nginx), `docker-compose.yml`, and `deploy/nginx.conf`. The compose stack starts MySQL 8, applies the schema and seed data through a one-shot `db-init` service, then starts the API and web container.
+
+```sh
+cp deploy/.env.example .env
+# Edit .env: set MYSQL_ROOT_PASSWORD, JWT_SECRET (16+ chars) and FRONTEND_ORIGIN
+docker compose up --build
+```
+
+Open http://localhost:8080. The web container proxies `/api` to the API container; the API is also exposed at http://localhost:3001. `FRONTEND_ORIGIN` must match the browser origin (use `http://localhost:8080`, not `127.0.0.1`, unless you change it). For HTTPS, terminate TLS at a reverse proxy in front of the web container and forward `/` to port 80; keep the API on the private compose network.
+
+To reset the database, stop the stack and remove the volume with `docker compose down -v`. Re-running `docker compose up` recreates the schema and seed data.
+
+### Manual deployment
+
 Serve `apps/web/dist` using a static host and run the API with `npm start`. Configure a reverse proxy to forward `/api` to the backend on the same origin. For separate origins, set `VITE_API_BASE_URL` before building the frontend and configure explicit CORS permissions on the API. Vite environment variables are public build-time values; keep secrets in the backend environment.
+
+## MVP scope decisions
+
+- Implemented optional SRS items: task countdown timer and timer-end sound (`FR-TASK-06/07`), TTS voice speed (`FR-COMM-08`), and most/least-completed activity analytics (`FR-PROG-04`).
+- Custom photo upload (`FR-COMM-09`) remains out of MVP; cards use the predefined icon set. Advanced analytics/export and role-specific permissions remain out of scope per SRS §3.
+- Supported databases: MySQL 8.0 and MariaDB 11.x. Shared locking uses `LOCK IN SHARE MODE`, which both accept.
 
 See [the polish and debugging review](docs/POLISH_REVIEW.md) for the reproduced bugs, fixes, and validation limits.

@@ -1,6 +1,6 @@
 // Mock stand-in for Group 1 persistence, used by child, schedule, task, and progress routes.
 // In-memory only; replace with parameterized SQL while keeping these signatures.
-import type { Activity, Child, ChildProfileInput, ChildProfileUpdate } from '@starter/shared';
+import type { Activity, ActivityProgress, Child, ChildProfileInput, ChildProfileUpdate } from '@starter/shared';
 import { PREDEFINED_ICONS } from '@starter/shared';
 
 export type { Activity, Child } from '@starter/shared';
@@ -240,4 +240,35 @@ export function setTaskCompletion(task: Task, done: boolean): void {
     task.status = 'pending';
     task.completed_at = null;
   }
+}
+
+export function activityCompletionForChild(
+  childId: number,
+  startDate: string,
+  endDate: string,
+): ActivityProgress[] {
+  const grouped = new Map<string, ActivityProgress>();
+  for (const schedule of store.schedules.filter((item) => item.child_id === childId && item.schedule_date >= startDate && item.schedule_date <= endDate)) {
+    for (const task of tasksForSchedule(schedule.id)) {
+      const entry = grouped.get(task.name) ?? {
+        name: task.name,
+        icon: task.icon,
+        total: 0,
+        completed: 0,
+        percentage: 0,
+        last_completed_at: null,
+      };
+      entry.total += 1;
+      if (task.status === 'done') {
+        entry.completed += 1;
+        if (task.completed_at && (!entry.last_completed_at || task.completed_at > entry.last_completed_at)) {
+          entry.last_completed_at = task.completed_at;
+        }
+      }
+      grouped.set(task.name, entry);
+    }
+  }
+  return [...grouped.values()]
+    .map((entry) => ({ ...entry, percentage: entry.total === 0 ? 0 : Math.round((entry.completed / entry.total) * 100) }))
+    .sort((a, b) => b.completed - a.completed || b.total - a.total || a.name.localeCompare(b.name));
 }

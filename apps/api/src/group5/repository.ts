@@ -1,5 +1,5 @@
 import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
-import type { PictureCardCategory } from '@starter/shared';
+import type { PictureCardCategory, VoiceSpeed } from '@starter/shared';
 import { getDatabasePool } from '../db/pool.js';
 
 export const CARD_CATEGORIES: PictureCardCategory[] = ['Food', 'Emotions', 'Activities', 'Needs'];
@@ -36,6 +36,7 @@ export interface UserSettings {
   font_size: 'small' | 'medium' | 'large';
   contrast: 'normal' | 'high';
   sound_on: boolean;
+  voice_speed: VoiceSpeed;
 }
 
 export interface Group5Repository {
@@ -61,6 +62,7 @@ interface SettingsRow extends RowDataPacket {
   font_size: UserSettings['font_size'];
   contrast: UserSettings['contrast'];
   sound_on: number | boolean;
+  voice_speed: UserSettings['voice_speed'];
 }
 
 function mapPictureCard(row: PictureCardRow): PictureCard {
@@ -82,6 +84,7 @@ function mapSettings(row: SettingsRow | undefined): UserSettings {
     font_size: row.font_size,
     contrast: row.contrast,
     sound_on: Boolean(row.sound_on),
+    voice_speed: row.voice_speed,
   };
 }
 
@@ -162,7 +165,7 @@ export class MySqlGroup5Repository implements Group5Repository {
       [userId],
     );
     const [rows] = await getDatabasePool().execute<SettingsRow[]>(
-      'SELECT font_size, contrast, sound_on FROM settings WHERE user_id = ?',
+      'SELECT font_size, contrast, sound_on, voice_speed FROM settings WHERE user_id = ?',
       [userId],
     );
     return mapSettings(rows[0]);
@@ -170,18 +173,20 @@ export class MySqlGroup5Repository implements Group5Repository {
 
   async updateSettings(userId: number, settings: UserSettings): Promise<UserSettings> {
     await getDatabasePool().execute(
-      `INSERT INTO settings (user_id, font_size, contrast, sound_on)
-       VALUES (?, ?, ?, ?)
+      `INSERT INTO settings (user_id, font_size, contrast, sound_on, voice_speed)
+       VALUES (?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
-         font_size = ?, contrast = ?, sound_on = ?`,
+         font_size = ?, contrast = ?, sound_on = ?, voice_speed = ?`,
       [
         userId,
         settings.font_size,
         settings.contrast,
         settings.sound_on,
+        settings.voice_speed,
         settings.font_size,
         settings.contrast,
         settings.sound_on,
+        settings.voice_speed,
       ],
     );
     return settings;

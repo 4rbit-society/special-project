@@ -5,7 +5,7 @@ import { resetStore } from '../../src/mocks/data.js';
 
 const { app, alice, bob, group5Repository } = await createTestApp();
 
-const DEFAULTS = { font_size: 'medium', contrast: 'normal', sound_on: true };
+const DEFAULTS = { font_size: 'medium', contrast: 'normal', sound_on: true, voice_speed: 'normal' };
 
 beforeEach(() => {
   resetStore();
@@ -27,8 +27,8 @@ describe('GET /api/settings (task 5.4)', () => {
 });
 
 describe('PUT /api/settings (task 5.4)', () => {
-  it('updates font size, contrast and sound, and persists them', async () => {
-    const patch = { font_size: 'large', contrast: 'high', sound_on: false };
+  it('updates font size, contrast, sound and voice speed, and persists them', async () => {
+    const patch = { font_size: 'large', contrast: 'high', sound_on: false, voice_speed: 'slow' };
     const updated = await request(app).put('/api/settings').set(alice).send(patch);
     expect(updated.status).toBe(200);
     expect(updated.body).toEqual(patch);
@@ -43,10 +43,11 @@ describe('PUT /api/settings (task 5.4)', () => {
 
   it('rejects invalid values with 400', async () => {
     for (const body of [
-      { font_size: 'huge', contrast: 'normal', sound_on: true },
-      { font_size: 'small', contrast: 'dark', sound_on: true },
-      { font_size: 'small', contrast: 'normal', sound_on: 'yes' },
-      { font_size: 12, contrast: 'normal', sound_on: true },
+      { font_size: 'huge', contrast: 'normal', sound_on: true, voice_speed: 'normal' },
+      { font_size: 'small', contrast: 'dark', sound_on: true, voice_speed: 'normal' },
+      { font_size: 'small', contrast: 'normal', sound_on: 'yes', voice_speed: 'normal' },
+      { font_size: 12, contrast: 'normal', sound_on: true, voice_speed: 'normal' },
+      { font_size: 'small', contrast: 'normal', sound_on: true, voice_speed: 'fastest' },
     ]) {
       const res = await request(app).put('/api/settings').set(alice).send(body);
       expect(res.status).toBe(400);
@@ -55,7 +56,7 @@ describe('PUT /api/settings (task 5.4)', () => {
   });
 
   it("keeps each user's settings isolated", async () => {
-    await request(app).put('/api/settings').set(alice).send({ font_size: 'large', contrast: 'high', sound_on: false });
+    await request(app).put('/api/settings').set(alice).send({ font_size: 'large', contrast: 'high', sound_on: false, voice_speed: 'fast' });
     const bobSettings = await request(app).get('/api/settings').set(bob);
     expect(bobSettings.status).toBe(200);
     expect(bobSettings.body).toEqual(DEFAULTS);

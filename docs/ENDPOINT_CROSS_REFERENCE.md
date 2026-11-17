@@ -2,7 +2,7 @@
 
 **Updated:** November 17, 2026 (Asia/Singapore). Covers the frontend integration working tree based on `cbf744f`.
 
-All **27 mounted method/path combinations** have authenticated-client methods and browser call sites: the existing 26 plus atomic draft saving. The live desktop browser test records network requests and asserts coverage of all 27. This replaces the earlier pre-integration inventory.
+All **28 mounted method/path combinations** have authenticated-client methods and browser call sites: the existing 27 plus per-activity completion analytics. The live desktop browser test records network requests and asserts coverage of all 28. This replaces the earlier pre-integration inventory.
 
 ## Endpoint coverage
 
@@ -33,6 +33,7 @@ All **27 mounted method/path combinations** have authenticated-client methods an
 | PATCH | `/api/cards/:id` | Staff card administration and Child board | [cards.ts](../apps/api/src/routes/cards.ts#L58) |
 | DELETE | `/api/cards/:id` | Staff card administration and Child board | [cards.ts](../apps/api/src/routes/cards.ts#L69) |
 | GET | `/api/progress/:childId` | Dashboard, seven-day progress and recent completions | [progress.ts](../apps/api/src/routes/progress.ts#L17) |
+| GET | `/api/progress/:childId/activities` | Most/least-completed activity patterns for 7 or 30 days | [progress.ts](../apps/api/src/routes/progress.ts#L18) |
 | GET | `/api/settings` | Load and save accessibility preferences | [settings.ts](../apps/api/src/routes/settings.ts#L13) |
 | PUT | `/api/settings` | Load and save accessibility preferences | [settings.ts](../apps/api/src/routes/settings.ts#L20) |
 
@@ -74,10 +75,19 @@ Drafts remain in the editor on a failed save. Preview is a read-only snapshot of
 
 401 clears the session and account data; validation/conflict errors retain forms/drafts. Network failures and timeouts are visible, with explicit reload/retry controls. A timed-out mutation may have reached the server: reload saved data before retrying. Progress refresh errors after a confirmed write are reported separately from save failure. Profile-name and preferences updates use separate endpoints; a partial failure explicitly states that the name saved while preferences failed.
 
+## Optional SRS features
+
+- **Task timer (`FR-TASK-06/07`).** The Child view starts an optional 1-second countdown for the current task when it has a duration. It shows a ring, a near-end visual state, and a timer-end message. When the sound setting is on, a short Web Audio cue plays; when audio is unavailable, the visual cue still works.
+- **TTS voice speed (`FR-COMM-08`).** Settings include `voice_speed` (`slow`, `normal`, `fast`). The Child view uses rates 0.65, 0.85 and 1.1 for card and phrase speech.
+- **Activity patterns (`FR-PROG-04`).** `GET /api/progress/:childId/activities?range=7d|30d` groups scheduled tasks by name and returns completion counts, percentages and the last completion. The Progress page shows most- and least-completed lists for the selected period.
+- **Photo upload (`FR-COMM-09`).** Deliberately out of MVP; custom cards use the predefined icon set.
+
+Database support covers MySQL 8.0 and MariaDB 11.x; shared-lock queries use `LOCK IN SHARE MODE`, which both accept. CI runs the database-backed suites against MySQL 8.0 and MariaDB 11.8.
+
 ## Verification and remaining limits
 
-- The original endpoint integration passed 171 API unit tests, 5 client/adapter tests, 23 database tests, 3 API/MySQL integration tests and 5 real-browser tests. See [the debugging review](POLISH_REVIEW.md) for expanded validation after polishing. Production build and workspace typechecks passed.
-- Browser checks cover all 27 method/path combinations, desktop CRUD, saved state after reload, read-only preview, completion, cards, settings, copy/date/delete, logout, session expiry, unavailable API/retry, failed-save recovery, a 390px mobile flow and isolation after account switching.
+- The current endpoint integration passed 178 API unit tests, 12 client/adapter/timer tests, 23 database tests, 3 API/MySQL integration tests and 16 real-browser tests. See [the debugging review](POLISH_REVIEW.md) for expanded validation after polishing. Production build and workspace typechecks passed.
+- Browser checks cover all 28 method/path combinations, desktop CRUD, saved state after reload, read-only preview, completion, cards, settings, copy/date/delete, logout, session expiry, unavailable API/retry, failed-save recovery, a 390px mobile flow and isolation after account switching.
 - [Browser tests](../apps/web/e2e/connected.spec.ts), [API draft tests](../apps/api/tests/group4/drafts.test.ts), and [database integration tests](../apps/api/src/db/feature-data.integration.test.ts) contain the assertions. [CI](../.github/workflows/api-tests.yml) runs client and browser tests as well as the backend suites.
 - Browser tests use a dedicated empty *_test database. The runner refuses existing users; cleanup requires a marker proving fixture creation by the current run and removes only its own users/seed caregiver.
 - This is not a full multi-browser, accessibility, load or usability certification. Actual speech audibility/voice availability still requires device testing. Optional timer, adjustable speech speed, photo upload and task-frequency analytics features are not added by endpoint integration.

@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+**/dist
+.git
+.github
+.mysql
+coverage
+test-results
+playwright-report
+apps/api/.env
+apps/api/.env.test
+apps/web/.env
+.deploy.env
+*.log

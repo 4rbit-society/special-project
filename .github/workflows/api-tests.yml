@@ -77,3 +77,56 @@ jobs:
           DB_TEST_PASSWORD: rootpassword
           DB_TEST_NAME: special_project_browser_test
         run: npm run test:e2e -w @starter/web
+
+  api-tests-mariadb:
+    name: Run API database tests (MariaDB)
+    runs-on: ubuntu-latest
+
+    services:
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_ROOT_PASSWORD: rootpassword
+          MARIADB_DATABASE: special_project_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h 127.0.0.1 -uroot -prootpassword --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+
+    env:
+      JWT_SECRET: test-secret-test-secret-123
+      FRONTEND_ORIGIN: http://localhost:5173
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run MySQL/MariaDB route integration tests
+        env:
+          DB_TEST_HOST: 127.0.0.1
+          DB_TEST_PORT: 3306
+          DB_TEST_USER: root
+          DB_TEST_PASSWORD: rootpassword
+          DB_TEST_NAME: special_project_test
+        run: npm run test:integration -w @starter/api
+
+      - name: Run MariaDB-backed database tests
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_USER: root
+          DB_PASSWORD: rootpassword
+          DB_NAME: special_project_test
+        run: npm run test:database -w @starter/api

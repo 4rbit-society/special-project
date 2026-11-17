@@ -145,10 +145,16 @@ export const progressQuerySchema = z.object({
   date: isoDate.optional(),
 });
 
+export const activityProgressQuerySchema = z.object({
+  range: z.enum(['7d', '30d']).default('7d'),
+  date: isoDate.optional(),
+});
+
 export const updateSettingsSchema = z.strictObject({
   font_size: z.enum(['small', 'medium', 'large']),
   contrast: z.enum(['normal', 'high']),
   sound_on: z.boolean(),
+  voice_speed: z.enum(['slow', 'normal', 'fast']),
 });
 
 export const updateProfileSchema = z.strictObject({

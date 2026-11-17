@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { DailySchedule, ScheduleTask, SharedPageProps } from './model';
+import { countdownLabel, countdownPercent, speechRateFor } from './lib/timer';
 import './child.css';
 
 type Category = 'Food' | 'Emotions' | 'Activities' | 'Needs';
@@ -62,7 +63,7 @@ function Illustration({ icon, variant = 'tile' }: { icon: string; variant?: 'til
   );
 }
 
-function speak(text: string, onUnavailable: () => void): boolean {
+function speak(text: string, onUnavailable: () => void, rate: number): boolean {
   if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
     onUnavailable();
     return false;
@@ -70,11 +71,34 @@ function speak(text: string, onUnavailable: () => void): boolean {
   try {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.85;
+    utterance.rate = rate;
     utterance.onerror = (event) => { if (event.error !== 'canceled' && event.error !== 'interrupted') onUnavailable(); };
     window.speechSynthesis.speak(utterance);
   } catch { onUnavailable(); return false; }
   return true;
+}
+
+function playTimerCue(): void {
+  try {
+    const AudioCtor = window.AudioContext
+      ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtor) return;
+    const context = new AudioCtor();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = 880;
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.45);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.45);
+    oscillator.onended = () => { void context.close(); };
+  } catch {
+    // The visual cue still works when audio is unavailable.
+  }
 }
 
 export function ChildView({ data, selectedChildId, today, actions, preview }: SharedPageProps & { preview?: DailySchedule }) {
@@ -84,6 +108,9 @@ export function ChildView({ data, selectedChildId, today, actions, preview }: Sh
   const [voiceStatus, setVoiceStatus] = useState('');
   const [completedName, setCompletedName] = useState('');
   const [confirmExit, setConfirmExit] = useState(false);
+  const [timer, setTimer] = useState<{ taskId: string; remaining: number; total: number; running: boolean; ended: boolean } | null>(null);
+  const timerCuePlayed = useRef(false);
+  const speechRate = speechRateFor(data.preferences.voiceSpeed);
 
   useEffect(() => {
     setSection('day');
@@ -104,10 +131,38 @@ export function ChildView({ data, selectedChildId, today, actions, preview }: Sh
   const visibleCards = (data.cards[selectedChildId] ?? []).filter((card) => !card.is_hidden && card.category === category).map((card) => ({ ...card, id: String(card.id) }));
   const phrase = words.length ? `I want ${words.map((word) => word.toLowerCase()).join(' ')}` : 'I want ...';
 
+  useEffect(() => {
+    if (preview || !currentTask || !currentTask.duration) {
+      setTimer(null);
+      return;
+    }
+    const total = currentTask.duration * 60;
+    timerCuePlayed.current = false;
+    setTimer({ taskId: currentTask.id, remaining: total, total, running: false, ended: false });
+  }, [currentTask?.id, currentTask?.duration, preview]);
+
+  useEffect(() => {
+    if (!timer?.running) return;
+    const interval = window.setInterval(() => {
+      setTimer((current) => {
+        if (!current?.running) return current;
+        if (current.remaining <= 1) return { ...current, remaining: 0, running: false, ended: true };
+        return { ...current, remaining: current.remaining - 1 };
+      });
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [timer?.running, timer?.taskId]);
+
+  useEffect(() => {
+    if (!timer?.ended || timerCuePlayed.current) return;
+    timerCuePlayed.current = true;
+    if (data.preferences.soundOn) playTimerCue();
+  }, [timer?.ended, data.preferences.soundOn]);
+
   function selectCard(card: PictureCard) {
     setWords((previous) => [...previous, card.label]);
     setVoiceStatus('');
-    if (speak(card.label, () => setVoiceStatus('Voice isn’t available. Your words are shown here.'))) {
+    if (speak(card.label, () => setVoiceStatus('Voice isn’t available. Your words are shown here.'), speechRate)) {
       setVoiceStatus(`Speaking: ${card.label}`);
     }
   }
@@ -191,6 +246,18 @@ export function ChildView({ data, selectedChildId, today, actions, preview }: Sh
                       <h2>Now</h2>
                       <Illustration icon={taskIllustration(currentTask)} variant="large" />
                       <strong>{currentTask.name}</strong>
+                      {timer && timer.taskId === currentTask.id && (
+                        <div className={`child-timer ${timer.ended ? 'is-ended' : ''} ${timer.remaining > 0 && timer.remaining <= 10 ? 'is-near-end' : ''}`} role="timer" aria-label={`Task timer: ${timer.ended ? 'time is up' : `${countdownLabel(timer.remaining)} remaining`}`}>
+                          <div className="child-timer-ring" style={{ background: `conic-gradient(var(--child-blue) ${countdownPercent(timer.remaining, timer.total)}%, var(--child-selected) 0)` }}>
+                            <span>{timer.ended ? 'Time up' : countdownLabel(timer.remaining)}</span>
+                          </div>
+                          <div className="child-timer-actions">
+                            {!timer.ended && <button className="child-button child-button--secondary" onClick={() => setTimer({ ...timer, running: !timer.running })}>{timer.running ? 'Pause timer' : timer.remaining === timer.total ? 'Start timer' : 'Resume timer'}</button>}
+                            <button className="child-button child-button--secondary" onClick={() => { timerCuePlayed.current = false; setTimer({ ...timer, remaining: timer.total, running: false, ended: false }); }}>Reset timer</button>
+                          </div>
+                          {timer.ended && <p className="child-timer-message" role="status">Time is up — nice effort!</p>}
+                        </div>
+                      )}
                       <button className="child-done-button" disabled={!!preview} onClick={completeCurrentTask}>✓ Done</button>
                     </section>
                     <section className="child-next">
@@ -241,7 +308,7 @@ export function ChildView({ data, selectedChildId, today, actions, preview }: Sh
               <div className="child-sentence-actions">
                 <button className="child-button child-button--primary" onClick={() => {
                   if (words.length === 0) return;
-                  if (speak(phrase, () => setVoiceStatus('Voice isn’t available. Your words are shown here.'))) setVoiceStatus(`Speaking: ${phrase}`);
+                  if (speak(phrase, () => setVoiceStatus('Voice isn’t available. Your words are shown here.'), speechRate)) setVoiceStatus(`Speaking: ${phrase}`);
                 }}><img src={asset('speech')} alt="" />Speak</button>
                 <button className="child-button child-button--secondary" onClick={() => { setWords([]); setVoiceStatus(''); }}><img src={asset('clear')} alt="" />Clear</button>
               </div>

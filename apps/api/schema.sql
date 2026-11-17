@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS settings (
   font_size ENUM('small', 'medium', 'large') NOT NULL DEFAULT 'medium',
   contrast ENUM('normal', 'high') NOT NULL DEFAULT 'normal',
   sound_on BOOLEAN NOT NULL DEFAULT TRUE,
+  voice_speed ENUM('slow', 'normal', 'fast') NOT NULL DEFAULT 'normal',
   PRIMARY KEY (user_id),
   CONSTRAINT fk_settings_user
     FOREIGN KEY (user_id) REFERENCES users (id)

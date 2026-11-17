@@ -53,14 +53,29 @@ export interface ApiTask {
 export interface ApiSchedule {
   id: number; child_id: number; schedule_date: string; created_at: string; tasks: ApiTask[]; revision: string;
 }
+export type VoiceSpeed = 'slow' | 'normal' | 'fast';
 export interface ApiSettings {
-  font_size: 'small' | 'medium' | 'large'; contrast: 'normal' | 'high'; sound_on: boolean;
+  font_size: 'small' | 'medium' | 'large'; contrast: 'normal' | 'high'; sound_on: boolean; voice_speed: VoiceSpeed;
 }
 export interface ApiCard {
   id: number; child_id: number | null; label: string; icon: string;
   category: 'Food' | 'Emotions' | 'Activities' | 'Needs'; is_hidden: boolean;
 }
 export interface ProgressDay { date: string; done: number; total: number; percentage: number }
+export type ProgressRange = '7d' | '30d';
+export interface ActivityProgress {
+  name: string;
+  icon: string;
+  total: number;
+  completed: number;
+  percentage: number;
+  last_completed_at: string | null;
+}
+export interface ActivityProgressSummary {
+  child_id: number;
+  range: ProgressRange;
+  activities: ActivityProgress[];
+}
 export interface ProgressSummary {
   child_id: number; range: '7d'; today: ProgressDay; last_7_days: ProgressDay[];
   recent_completions: Array<{ task_id: number; name: string; icon: string; schedule_date: string; completed_at: string }>;

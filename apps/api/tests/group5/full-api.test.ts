@@ -119,7 +119,7 @@ describe('end-to-end MVP flow through the API (task 5.5)', () => {
     const settings = await request(app)
       .put('/api/settings')
       .set(alice)
-      .send({ font_size: 'medium', contrast: 'normal', sound_on: false });
+      .send({ font_size: 'medium', contrast: 'normal', sound_on: false, voice_speed: 'normal' });
     expect(settings.status).toBe(200);
   });
 });

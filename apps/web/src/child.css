@@ -347,3 +347,17 @@
 .child-view--text-small .child-button,
 .child-view--text-small .child-activity strong,
 .child-view--text-small .child-activity-state { font-size: 14px; }
+
+.child-timer { display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap; margin: 12px 0 20px; padding: 16px; border: 2px solid var(--child-ink); border-radius: 20px; background: var(--child-canvas); }
+.child-timer-ring { width: 128px; height: 128px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; }
+.child-timer-ring > span { display: grid; place-items: center; width: 94px; height: 94px; border-radius: 50%; background: var(--child-canvas); color: var(--child-ink); font-size: 28px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.child-timer-actions { display: grid; gap: 10px; min-width: 190px; }
+.child-timer-actions .child-button { height: 56px; }
+.child-timer-message { flex-basis: 100%; margin: 0; text-align: center; font-size: 22px; font-weight: 800; color: var(--child-ink); }
+.child-timer.is-near-end { border-color: #b45309; box-shadow: 0 0 0 6px #fbbf2433; animation: child-timer-pulse 1.2s ease-in-out infinite; }
+.child-timer.is-ended { border-color: #15803d; background: #f0fdf4; }
+.child-view--high-contrast .child-timer { border-color: #000; background: #fff; }
+.child-view--high-contrast .child-timer.is-ended { background: #fff; }
+@keyframes child-timer-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.015); } }
+@media (prefers-reduced-motion: reduce) { .child-timer.is-near-end { animation: none; } }
+@media (max-width: 600px) { .child-timer { gap: 14px; padding: 12px; } .child-timer-ring { width: 108px; height: 108px; } .child-timer-ring > span { width: 80px; height: 80px; font-size: 24px; } }

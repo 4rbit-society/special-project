@@ -1,4 +1,4 @@
-import type { Activity, Child, ChildProfileInput, ChildProfileUpdate, ScheduleDraftInput } from '@starter/shared';
+import type { Activity, ActivityProgress, Child, ChildProfileInput, ChildProfileUpdate, ScheduleDraftInput } from '@starter/shared';
 import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import * as mock from '../mocks/data.js';
 import { getDatabasePool } from './pool.js';
@@ -514,8 +514,51 @@ export async function setTaskCompletion(task: Task, done: boolean): Promise<Task
   return normalizeTask(row);
 }
 
-export function scheduleRevision(schedule: Schedule, tasks: Task[]): string {
-  // Completion is deliberately excluded: marking Done must not invalidate an editor.
+interface ActivityProgressRow extends RowDataPacket {
+  name: string;
+  icon: string;
+  total: number | string;
+  completed: number | string;
+  last_completed_at: string | null;
+}
+
+export async function activityCompletionForChild(
+  childId: number,
+  startDate: string,
+  endDate: string,
+): Promise<ActivityProgress[]> {
+  if (useMockStore()) {
+    return mock.activityCompletionForChild(childId, startDate, endDate);
+  }
+
+  const [rows] = await getDatabasePool().query<ActivityProgressRow[]>(
+    `SELECT t.name, t.icon, COUNT(*) AS total,
+            SUM(CASE WHEN t.status = 'done' THEN 1 ELSE 0 END) AS completed,
+            MAX(t.completed_at) AS last_completed_at
+     FROM tasks AS t
+     JOIN schedules AS s ON s.id = t.schedule_id
+     WHERE s.child_id = ? AND s.schedule_date BETWEEN ? AND ?
+     GROUP BY t.name, t.icon
+     ORDER BY completed DESC, total DESC, t.name ASC`,
+    [childId, startDate, endDate],
+  );
+  return rows.map((row) => {
+    const total = Number(row.total);
+    const completed = Number(row.completed);
+    return {
+      name: row.name,
+      icon: row.icon,
+      total,
+      completed,
+      percentage: total === 0 ? 0 : Math.round((completed / total) * 100),
+      last_completed_at: row.last_completed_at === null
+        ? null
+        : `${String(row.last_completed_at).replace(' ', 'T')}Z`,
+    };
+  });
+}
+
+export function scheduleRevision(schedule: Schedule, tasks: Task[]): string {  // Completion is deliberately excluded: marking Done must not invalidate an editor.
   const snapshot = [schedule.id, schedule.child_id, schedule.schedule_date, tasks.map((task) => [task.id, task.activity_id, task.name, task.icon, task.start_time, task.duration_min, task.position])];
   return createHash('sha256').update(JSON.stringify(snapshot)).digest('hex');
 }

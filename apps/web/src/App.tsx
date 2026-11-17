@@ -150,6 +150,10 @@ export function App() {
     addCard: (input) => perform(async () => { const card = await api.createCard(input); cardRevisions.current.set(input.childId, (cardRevisions.current.get(input.childId) ?? 0) + 1); return (current) => mergeCard(current, input.childId, card); }),
     hideCard: (childId, id, hidden) => perform(async () => { const card = await api.hideCard(id, hidden); cardRevisions.current.set(childId, (cardRevisions.current.get(childId) ?? 0) + 1); return (current) => mergeCard(current, childId, card); }),
     deleteCard: (childId, id) => perform(async () => { await api.deleteCard(id); cardRevisions.current.set(childId, (cardRevisions.current.get(childId) ?? 0) + 1); return (current) => ({ ...current, cards: { ...current.cards, [childId]: (current.cards[childId] ?? []).filter((card) => card.id !== id) } }); }),
+    activityProgress: async (childId, range) => {
+      try { return await api.activityProgress(childId, range); }
+      catch (error) { setMessage(messageOf(error)); return undefined; }
+    },
   };
   const rootClass = `app-root font-${data.preferences.fontSize} contrast-${data.preferences.contrast}`;
   const banner = message && <div className="auth-error" role="alert"><p>{message}</p><button className="button button-outline" onClick={() => setMessage('')}>Dismiss</button><button className="button button-outline" onClick={() => { if (window.confirm('Reload saved data? Unsaved drafts will be discarded.')) { setMessage(''); setRetry((value) => value + 1); } }}>Reload saved data</button></div>;

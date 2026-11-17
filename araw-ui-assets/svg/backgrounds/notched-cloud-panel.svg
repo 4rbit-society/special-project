@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 440" fill="none">
+  <defs>
+    <filter id="notched-panel-shadow" x="-3%" y="-4%" width="106%" height="112%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#4A90E2" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <path d="M36 20H940C978 20 1002 42 1018 72C1034 102 1068 112 1094 128C1104 134 1108 144 1108 158V392C1108 409.673 1093.67 424 1076 424H36C18.3269 424 4 409.673 4 392V52C4 34.3269 18.3269 20 36 20Z" fill="#FFFFFF" filter="url(#notched-panel-shadow)"/>
+</svg>

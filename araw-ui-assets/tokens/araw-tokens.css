@@ -1,0 +1,49 @@
+/* Araw UI Design Tokens */
+:root {
+  /* Colors */
+  --araw-primary: #1664D8; /* Cobalt Primary */
+  --araw-primary-bright: #2B84F3; /* Electric Blue */
+  --araw-ink-primary: #0D2B6B; /* Deep Navy Ink */
+  --araw-ink-muted: #4E6791; /* Slate Navy Body */
+  --araw-teal-cta: #0DC1C1; /* Aqua Teal CTA */
+  --araw-sun-gold: #FFD43B; /* Sun Gold */
+  --araw-sky-top: #BEE6FD; /* Sky Top */
+  --araw-sky-mid: #E1F4FE; /* Sky Mid */
+  --araw-hill-mint: #76E7D3; /* Mint Hill Light */
+  --araw-hill-teal: #2FC4BE; /* Teal Hill Deep */
+  --araw-surface-white: #FFFFFF; /* Card Pure White */
+  --araw-surface-input: #EAF2FC; /* Input Ice Tint */
+  --araw-tint-blue: #DCEEFF; /* KPI Ice Blue */
+  --araw-tint-mint: #D3F9ED; /* KPI Pastel Mint */
+  --araw-tint-purple: #EAE2FE; /* KPI Soft Lavender */
+  --araw-border-soft: #CFE3FA; /* Card Hairline */
+  --araw-success: #12C48B; /* Success Emerald */
+  --araw-next-bg: #E4FDE4; /* Next Lime Mint */
+  --araw-tag-hygiene: #E3F2FD; /* Hygiene Blue Pill */
+  --araw-tag-food: #FFF3D6; /* Food Amber Pill */
+  --araw-danger: #DF2F34; /* Destructive Coral */
+
+  /* Gradients */
+  --araw-grad-primary: linear-gradient(90deg, #1EB8E8 0%, #1664D8 100%);
+  --araw-grad-teal: linear-gradient(90deg, #10D5C8 0%, #09A7B8 100%);
+  --araw-grad-sky: linear-gradient(180deg, #BEE6FD 0%, #E1F4FE 55%, #B9F1E8 100%);
+  --araw-grad-auth-hero: linear-gradient(145deg, #48D8DF 0%, #22C3CF 55%, #35DBCA 100%);
+  --araw-grad-danger: linear-gradient(180deg, #EE4444 0%, #CC1F26 100%);
+
+  /* Shadows */
+  --araw-shadow-panel: 0 14px 36px -8px rgba(48, 118, 204, 0.14);
+  --araw-shadow-cta: 0 8px 20px -4px rgba(22, 100, 216, 0.34);
+  --araw-shadow-card: 0 6px 18px -4px rgba(32, 92, 168, 0.08);
+
+  /* Typography */
+  --araw-font-display: "Outfit", system-ui, sans-serif;
+  --araw-font-body: "Plus Jakarta Sans", system-ui, sans-serif;
+  --araw-text-sm: 16px;
+  --araw-text-md: 18px;
+  --araw-text-lg: 20px;
+
+  /* Radii */
+  --araw-radius-panel: 28px;
+  --araw-radius-card: 22px;
+  --araw-radius-pill: 9999px;
+}

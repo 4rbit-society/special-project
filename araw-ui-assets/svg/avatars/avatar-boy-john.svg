@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <defs>
+    <linearGradient id="boy-avatar-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E7F5FF"/>
+      <stop offset="100%" stop-color="#CBE7FC"/>
+    </linearGradient>
+    <clipPath id="boy-avatar-clip">
+      <circle cx="80" cy="80" r="74"/>
+    </clipPath>
+  </defs>
+  <circle cx="80" cy="80" r="74" fill="url(#boy-avatar-bg)" stroke="#FFFFFF" stroke-width="4"/>
+  <g clip-path="url(#boy-avatar-clip)">
+    <!-- Shoulders / shirt -->
+    <path d="M36 156C38 128 56 116 80 116C104 116 122 128 124 156H36Z" fill="#5CC4F5" stroke="#1E293B" stroke-width="3"/>
+    <!-- Neck -->
+    <rect x="70" y="104" width="20" height="18" rx="6" fill="#FFD3B6" stroke="#1E293B" stroke-width="2.8"/>
+    <!-- Ears -->
+    <circle cx="43" cy="82" r="9" fill="#FFC5A1" stroke="#1E293B" stroke-width="2.8"/>
+    <circle cx="117" cy="82" r="9" fill="#FFC5A1" stroke="#1E293B" stroke-width="2.8"/>
+    <!-- Face -->
+    <ellipse cx="80" cy="78" rx="35" ry="36" fill="#FFD8BE" stroke="#1E293B" stroke-width="3"/>
+    <!-- Tousled brown hair -->
+    <path d="M43 74C41 50 56 32 82 32C106 32 120 48 117 74C111 60 102 56 95 62C88 52 74 52 67 62C60 56 49 62 43 74Z" fill="#8B4E34" stroke="#1E293B" stroke-width="3" stroke-linejoin="round"/>
+    <!-- Eyes & brows -->
+    <path d="M59 68C62 65 67 65 70 68" stroke="#1E293B" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M90 68C93 65 98 65 101 68" stroke="#1E293B" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="65" cy="78" r="4.2" fill="#1E293B"/>
+    <circle cx="95" cy="78" r="4.2" fill="#1E293B"/>
+    <circle cx="66.2" cy="76.6" r="1.3" fill="#FFFFFF"/>
+    <circle cx="96.2" cy="76.6" r="1.3" fill="#FFFFFF"/>
+    <!-- Cheeks & smile -->
+    <ellipse cx="56" cy="87" rx="6" ry="3.5" fill="#FF8787" opacity="0.65"/>
+    <ellipse cx="104" cy="87" rx="6" ry="3.5" fill="#FF8787" opacity="0.65"/>
+    <path d="M71 91C75 97 85 97 89 91" stroke="#1E293B" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</svg>

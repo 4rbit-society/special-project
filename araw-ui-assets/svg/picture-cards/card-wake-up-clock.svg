@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140" fill="none">
+  <!-- Ringing bells -->
+  <path d="M34 42C26 35 27 24 36 20C43 17 50 22 52 30" fill="#FFE066" stroke="#0F295C" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M106 42C114 35 113 24 104 20C97 17 90 22 88 30" fill="#FFE066" stroke="#0F295C" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Sound waves -->
+  <path d="M22 24C18 28 17 34 19 39" stroke="#F59F00" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M118 24C122 28 123 34 121 39" stroke="#F59F00" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Legs -->
+  <path d="M48 106L40 118" stroke="#0F295C" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M92 106L100 118" stroke="#0F295C" stroke-width="4.5" stroke-linecap="round"/>
+  <!-- Outer clock casing -->
+  <circle cx="70" cy="72" r="40" fill="#FFD43B" stroke="#0F295C" stroke-width="3.8"/>
+  <!-- Face -->
+  <circle cx="70" cy="72" r="30" fill="#FFFFFF" stroke="#0F295C" stroke-width="2.5"/>
+  <!-- Hands -->
+  <path d="M70 54V72L83 80" stroke="#0F295C" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="70" cy="72" r="4" fill="#1664D8"/>
+</svg>

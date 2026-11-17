@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140" fill="none">
+  <!-- Plate -->
+  <circle cx="70" cy="70" r="36" fill="#FFE066" stroke="#E67700" stroke-width="3"/>
+  <circle cx="70" cy="70" r="24" fill="#FFF3BF" stroke="#F59F00" stroke-width="2"/>
+  <!-- Fork -->
+  <path d="M22 40V58C22 62 25 65 28 65V102" stroke="#64748B" stroke-width="4" stroke-linecap="round"/>
+  <path d="M17 40V54M27 40V54" stroke="#64748B" stroke-width="3.2" stroke-linecap="round"/>
+  <!-- Knife -->
+  <path d="M114 40C119 46 119 62 114 68V102" stroke="#64748B" stroke-width="4.5" stroke-linecap="round"/>
+</svg>

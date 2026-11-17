@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140" fill="none">
+  <!-- Pole -->
+  <rect x="63" y="24" width="14" height="88" rx="7" fill="#E2E8F0" stroke="#0F295C" stroke-width="2.5"/>
+  <!-- Rings bottom to top -->
+  <rect x="26" y="96" width="88" height="20" rx="10" fill="#51CF66" stroke="#0F295C" stroke-width="2.5"/>
+  <rect x="33" y="77" width="74" height="19" rx="9.5" fill="#4DABF7" stroke="#0F295C" stroke-width="2.5"/>
+  <rect x="40" y="59" width="60" height="18" rx="9" fill="#FF922B" stroke="#0F295C" stroke-width="2.5"/>
+  <rect x="47" y="42" width="46" height="17" rx="8.5" fill="#FFD43B" stroke="#0F295C" stroke-width="2.5"/>
+  <circle cx="70" cy="27" r="10" fill="#FF6B8B" stroke="#0F295C" stroke-width="2.5"/>
+</svg>

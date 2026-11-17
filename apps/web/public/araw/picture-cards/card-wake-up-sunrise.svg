@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140" fill="none">
+  <defs>
+    <linearGradient id="sunrise-sky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFE0E9"/>
+      <stop offset="55%" stop-color="#FFF0C2"/>
+      <stop offset="100%" stop-color="#B8E7FF"/>
+    </linearGradient>
+    <clipPath id="sunrise-clip">
+      <rect x="10" y="10" width="120" height="120" rx="26"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#sunrise-clip)">
+    <rect x="10" y="10" width="120" height="120" fill="url(#sunrise-sky)"/>
+    <circle cx="70" cy="78" r="30" fill="#FFAA33" opacity="0.35"/>
+    <circle cx="70" cy="78" r="22" fill="#FFD43B"/>
+    <!-- Waves -->
+    <path d="M10 86C34 74 56 90 80 82C102 74 118 82 130 88V130H10V86Z" fill="#4FA8FF"/>
+    <path d="M10 98C36 90 60 104 88 96C108 90 120 96 130 100V130H10V98Z" fill="#237AE6"/>
+  </g>
+  <rect x="10" y="10" width="120" height="120" rx="26" stroke="#DCEEFF" stroke-width="3"/>
+</svg>

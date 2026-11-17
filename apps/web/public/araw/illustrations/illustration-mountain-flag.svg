@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 150" fill="none">
+  <defs>
+    <linearGradient id="mtn-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#489DF5"/>
+      <stop offset="100%" stop-color="#1966D2"/>
+    </linearGradient>
+  </defs>
+  <!-- Flagpole & Flag -->
+  <rect x="98" y="18" width="4" height="34" rx="2" fill="#0F295C"/>
+  <path d="M102 18L134 27L102 36V18Z" fill="#FFD43B" stroke="#F59F00" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Mountain -->
+  <path d="M22 140L86 44C91 37 101 37 106 44L168 140H22Z" fill="url(#mtn-grad)"/>
+  <!-- Snow cap -->
+  <path d="M68 71L86 44C91 37 101 37 106 44L124 71L111 66L101 76L91 66L80 76L68 71Z" fill="#FFFFFF"/>
+  <!-- Soft hill overlay -->
+  <path d="M12 140C42 118 76 122 108 140H12Z" fill="#8DC3FF" opacity="0.5"/>
+</svg>

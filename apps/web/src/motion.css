@@ -1,0 +1,138 @@
+:root {
+  --araw-motion-ease: cubic-bezier(.22, 1, .36, 1);
+  --araw-motion-quick: 160ms;
+}
+
+:is(.button, .staff-button, .ui-button, .child-button, .child-done-button, .child-exit-button, .staff-nav-link, .child-picture-card) {
+  transition: transform var(--araw-motion-quick) var(--araw-motion-ease),
+    box-shadow var(--araw-motion-quick) ease,
+    border-color var(--araw-motion-quick) ease,
+    background-color var(--araw-motion-quick) ease,
+    color var(--araw-motion-quick) ease;
+}
+
+:is(.button, .staff-button, .ui-button, .child-button, .child-done-button, .child-exit-button, .staff-nav-link, .child-picture-card):active:not(:disabled) {
+  transform: translateY(0) scale(.99);
+}
+
+@media (hover: hover) {
+  :is(.button, .staff-button, .ui-button, .child-button, .child-done-button, .child-exit-button, .staff-nav-link, .child-picture-card):hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  .staff-nav-link:hover:not(:disabled),
+  .child-picture-card:hover:not(:disabled) {
+    box-shadow: 0 7px 16px rgba(22, 100, 216, .12);
+  }
+
+  :is(.staff-nav-link, .child-nav-button):hover:not(:disabled) img {
+    transform: scale(1.08);
+  }
+}
+
+@media (hover: none) {
+  .button:hover,
+  .ui-button:hover { transform: none; }
+}
+
+.staff-nav-link img,
+.child-nav-button img { transition: transform var(--araw-motion-quick) var(--araw-motion-ease); }
+
+:is(.auth-field input, .staff-field input, .staff-field select, .schedule-page input, .schedule-page select):focus-visible {
+  transition: border-color var(--araw-motion-quick) ease, box-shadow var(--araw-motion-quick) ease;
+  border-color: var(--araw-primary-bright);
+  box-shadow: 0 0 0 4px rgba(43, 132, 243, .16);
+}
+
+.staff-progress-bar span,
+.ui-progress span { transition: width 340ms var(--araw-motion-ease); }
+.progress-bar-track > span { transition: height 340ms var(--araw-motion-ease); }
+.child-activity,
+.child-current,
+.child-next { transition: border-color 180ms ease, background-color 180ms ease; }
+
+@keyframes araw-arrive {
+  from { opacity: .88; transform: translate3d(0, 6px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes araw-pop {
+  from { opacity: .9; transform: scale(.985); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes araw-slide-menu {
+  from { opacity: .85; transform: translate3d(0, -5px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes araw-grow-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes araw-grow-y {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@keyframes araw-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -3px, 0); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .auth-intro { animation: araw-arrive 320ms var(--araw-motion-ease) both; }
+  .auth-card { animation: araw-arrive 300ms var(--araw-motion-ease) 30ms both; }
+  .auth-hero-sun { animation: araw-float 9s ease-in-out infinite; }
+  .staff-nav,
+  .staff-header { animation: araw-arrive 260ms var(--araw-motion-ease) both; }
+  .staff-dashboard-intro,
+  .staff-page > h1,
+  .schedule-page-heading { animation: araw-arrive 250ms var(--araw-motion-ease) both; }
+
+  .staff-dashboard-summary,
+  .staff-dashboard-children,
+  .staff-last-seven,
+  .staff-profile-card,
+  .progress-metric,
+  .child-current,
+  .child-next,
+  .child-board,
+  .child-activity { animation: araw-arrive 260ms var(--araw-motion-ease) both; }
+
+  .staff-dashboard-children,
+  .staff-profile-card:nth-child(2),
+  .progress-metric:nth-child(2),
+  .child-next,
+  .child-activity:nth-child(even) { animation-delay: 40ms; }
+  .staff-last-seven,
+  .staff-profile-card:nth-child(3),
+  .progress-metric:nth-child(3),
+  .child-activity:nth-child(n+4) { animation-delay: 70ms; }
+
+  .child-header,
+  .child-nav,
+  .child-progress { animation: araw-arrive 230ms var(--araw-motion-ease) both; }
+  .child-completion,
+  .child-selected-check,
+  .child-exit-panel,
+  .auth-error,
+  .request-status,
+  .schedule-dialog[open] .schedule-modal { animation: araw-pop 190ms var(--araw-motion-ease) both; }
+
+  .staff-progress-bar span,
+  .ui-progress span { transform-origin: left center; animation: araw-grow-x 430ms var(--araw-motion-ease) both; }
+  .progress-bar-track > span { transform-origin: center bottom; animation: araw-grow-y 430ms var(--araw-motion-ease) both; }
+
+  .staff-nav.open { animation: araw-slide-menu 170ms var(--araw-motion-ease) both; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

@@ -15,6 +15,7 @@ const avatarAssets: Record<string, { desktop: string; mobile: string; dashboard:
 };
 
 function Avatar({ avatar, variant = 'profile' }: { avatar: string; variant?: 'profile' | 'dashboard' }) {
+  if (avatar === '🐱') return <span className={`staff-avatar staff-avatar-${variant}`}><img className="staff-avatar-kit" src="/araw/avatars/avatar-cat-svg.svg" alt="" /></span>;
   if (!avatarAssets[avatar]) return <span className="staff-avatar staff-avatar-emoji" aria-hidden="true">{avatar}</span>;
   const image = avatarAssets[avatar]!;
   if (variant === 'dashboard') return <span className="staff-avatar staff-avatar-dashboard"><img src={image.dashboard} alt="" /></span>;
@@ -39,9 +40,9 @@ function Stats({ data, today }: Pick<Props, 'data' | 'today'>) {
   const taskCount = todaySchedules.reduce((sum, schedule) => sum + schedule.tasks.length, 0);
   const doneCount = todaySchedules.reduce((sum, schedule) => sum + schedule.tasks.filter((task) => task.status === 'done').length, 0);
   const values = [
-    { icon: '/assets/staff-stat-users.svg', value: String(data.children.length), label: 'Child profiles' },
-    { icon: '/assets/staff-stat-check.svg', value: `${doneCount} of ${taskCount}`, label: 'Tasks done today' },
-    { icon: '/assets/staff-stat-calendar.svg', value: `${todaySchedules.length} of ${data.children.length}`, label: 'Children with a schedule today' },
+    { icon: '/araw/icons/icon-child-profiles.svg', value: String(data.children.length), label: 'Child profiles' },
+    { icon: '/araw/icons/icon-check-circle.svg', value: `${doneCount} of ${taskCount}`, label: 'Tasks done today' },
+    { icon: '/araw/icons/icon-schedules-calendar.svg', value: `${todaySchedules.length} of ${data.children.length}`, label: 'Children with a schedule today' },
   ];
   return <div className="staff-stats">{values.map((stat) => <div className="staff-stat-card" key={stat.label}><span className="staff-stat-icon"><img src={stat.icon} alt="" /></span><div><strong>{stat.value}</strong><span>{stat.label}</span></div></div>)}</div>;
 }
@@ -72,10 +73,12 @@ function Dashboard({ data, selectedChildId, today, actions, onAddChild }: Props 
     <div className="staff-step"><span className="staff-step-badge">3</span><div><h2>Open the child view</h2><p>Hand the device over. They tap Done as they go.</p></div></div>
   </div></div>;
   return <div className="staff-page staff-dashboard">
-    <h1>Dashboard</h1><p className="staff-lead staff-desktop-date">Today · {dayDate(today, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p><p className="staff-lead staff-mobile-date">{dayDate(today, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-    <div className="staff-dashboard-action"><button className="staff-button primary" onClick={onAddChild}>Add child</button></div>
-    <Stats data={data} today={today} />
-    <h2>Your children</h2>
+    <header className="staff-dashboard-intro"><h1>Good morning, {data.user?.name ?? 'friend'}!</h1><p>Here's what's happening with your little learners today.</p></header>
+    <section className="staff-dashboard-summary staff-panel" aria-labelledby="dashboard-title"><h2 id="dashboard-title">Dashboard</h2><div className="staff-dashboard-summary-content">
+      <div className="staff-dashboard-action"><button className="staff-button primary" onClick={onAddChild}>Add child</button></div>
+      <Stats data={data} today={today} />
+    </div></section>
+    <div className="staff-dashboard-bottom"><section className="staff-dashboard-children staff-panel"><h2>Your children</h2>
     <div className="staff-child-grid">{data.children.map((child) => {
       const schedule = data.schedules.find((item) => item.childId === child.id && item.date === today);
       const total = schedule?.tasks.length ?? 0;
@@ -85,8 +88,8 @@ function Dashboard({ data, selectedChildId, today, actions, onAddChild }: Props 
         <button className="staff-button primary" onClick={() => actions.openChild(child.id)}>Open Child view</button>
         <button className="staff-button secondary" onClick={() => { actions.selectChild(child.id); actions.navigate('schedules'); }}>{schedule ? 'View schedule' : 'Create schedule'}</button>
       </article>;
-    })}</div>
-    <section className="staff-panel staff-last-seven"><div className="staff-last-seven-header"><h2>Last 7 days</h2><label className="staff-field">Child<select value={selectedId} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((child) => <option key={child.id} value={child.id}>{child.name}</option>)}</select></label></div><WeekView data={data} childId={selectedId} today={today} compact /><button className="staff-button secondary" onClick={() => actions.navigate('progress')}>View progress</button></section>
+    })}</div></section>
+    <section className="staff-panel staff-last-seven"><div className="staff-last-seven-header"><h2>Last 7 days</h2><label className="staff-field">Child<select value={selectedId} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((child) => <option key={child.id} value={child.id}>{child.name}</option>)}</select></label></div><WeekView data={data} childId={selectedId} today={today} compact /><button className="staff-button secondary" onClick={() => actions.navigate('progress')}>View progress</button></section></div>
   </div>;
 }
 
@@ -156,7 +159,7 @@ function Cards({ data, selectedChildId, actions }: Props) {
       <label className="staff-field">Category<select value={category} onChange={(event) => setCategory(event.target.value as ApiCard['category'])}>{['Food', 'Emotions', 'Activities', 'Needs'].map((item) => <option key={item}>{item}</option>)}</select></label>
       <label className="staff-field">Picture<select value={icon} onChange={(event) => setIcon(event.target.value)}>{['⭐', '💧', '📚', '🥛', '🧸', '😊', '😢', '🚽'].map((item) => <option key={item}>{item}</option>)}</select></label>
       <button className="staff-button primary" type="submit" disabled={!cards}>Add card</button>{notice && <p role="status">{notice}</p>}
-    </form><section className="staff-panel"><h2>Saved cards</h2>{cards ? cards.map((card) => <div className="staff-custom-card" key={card.id}><span aria-hidden="true" style={{ fontSize: 40 }}>{card.icon}</span><p>{card.label} · {card.category}{card.is_hidden ? ' · Hidden' : ''}</p>{card.child_id !== null ? <><button className="staff-button secondary" onClick={() => { void actions.hideCard(child.id, card.id, !card.is_hidden); }}>{card.is_hidden ? 'Show' : 'Hide'} {card.label}</button><button className="staff-button danger" onClick={() => { if (window.confirm(`Delete ${card.label}?`)) void actions.deleteCard(child.id, card.id); }}>Delete {card.label}</button></> : <small>Shared default</small>}</div>) : <p>Loading cards…</p>}</section></div>
+    </form><section className="staff-panel"><h2>Saved cards</h2>{cards ? cards.map((card) => <div className="staff-custom-card" key={card.id}><span aria-hidden="true" className="staff-custom-card-icon">{card.icon.startsWith('/') ? <img src={card.icon} alt="" /> : card.icon}</span><p>{card.label} · {card.category}{card.is_hidden ? ' · Hidden' : ''}</p>{card.child_id !== null ? <><button className="staff-button secondary" onClick={() => { void actions.hideCard(child.id, card.id, !card.is_hidden); }}>{card.is_hidden ? 'Show' : 'Hide'} {card.label}</button><button className="staff-button danger" onClick={() => { if (window.confirm(`Delete ${card.label}?`)) void actions.deleteCard(child.id, card.id); }}>Delete {card.label}</button></> : <small>Shared default</small>}</div>) : <p>Loading cards…</p>}</section></div>
   </div>;
 }
 

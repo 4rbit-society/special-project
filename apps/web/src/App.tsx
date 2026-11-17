@@ -3,6 +3,8 @@ import type { ApiSchedule, PublicUser } from '@starter/shared';
 import { ChildView } from './ChildView';
 import { SchedulePages } from './SchedulePages';
 import { StaffPages } from './StaffPages';
+import { StaffLayout } from './components/StaffLayout';
+import { Brand } from './components/ui';
 import { ApiClient, ApiError } from './lib/client';
 import { activityFromApi, childFromApi, childToApi, draftToApi, emptyData, mergeSchedule, preferencesFromApi, preferencesToApi, scheduleFromApi, taskFromApi } from './lib/adapters';
 import type { AppActions, AppData, DailySchedule, Page, StaffPage } from './model';
@@ -10,21 +12,11 @@ import type { AppActions, AppData, DailySchedule, Page, StaffPage } from './mode
 import { localDate } from './lib/date';
 import { tokenKey, readToken, clearToken, writeToken, hasTabSession } from './lib/session';
 const base = import.meta.env.VITE_API_BASE_URL ?? '';
-const navItems: { page: StaffPage; label: string; icon: string }[] = [
-  { page: 'dashboard', label: 'Dashboard', icon: '/assets/figma-701fc.svg' },
-  { page: 'profiles', label: 'Child Profiles', icon: '/assets/figma-5e608.svg' },
-  { page: 'schedules', label: 'Schedules', icon: '/assets/figma-cc1cc.svg' },
-  { page: 'progress', label: 'Progress', icon: '/assets/figma-3bc4a.svg' },
-  { page: 'settings', label: 'Settings', icon: '/assets/figma-5cefd.svg' },
-];
 function pageFromHash(): Page {
   const requested = location.hash.slice(1);
   return ['dashboard', 'profiles', 'schedules', 'tasks', 'progress', 'settings', 'cards', 'child', 'login', 'register'].includes(requested) ? requested as Page : 'dashboard';
 }
 const messageOf = (error: unknown) => error instanceof Error ? error.message : 'The change could not be saved. Please retry.';
-function Brand({ reversed = false }: { reversed?: boolean }) {
-  return <div className={`araw-brand ${reversed ? 'reversed' : ''}`}><img src={reversed ? '/assets/brand-mark-large.svg' : '/assets/brand-mark.svg'} alt="" /><span>Araw</span></div>;
-}
 function AuthScreen({ page, onPage, onLogin }: { page: 'login' | 'register'; onPage: (page: Page) => void; onLogin: (token: string, remember: boolean) => void }) {
   const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
   const [role, setRole] = useState<PublicUser['role']>('caregiver'); const [remember, setRemember] = useState(false);
@@ -39,14 +31,14 @@ function AuthScreen({ page, onPage, onLogin }: { page: 'login' | 'register'; onP
     } catch (error) { setError(messageOf(error)); } finally { setBusy(false); }
   }
   return <main className="auth-page"><div className="auth-layout">
-    <section className="auth-intro"><Brand reversed /><h1>A clear day,<br />one step at a time.</h1><p>Visual schedules and picture cards</p></section>
-    <form className="auth-card" onSubmit={submit}><div className="auth-mobile-logo"><Brand /></div><h2>{register ? 'Create your account' : 'Welcome back'}</h2><p>{registered ? 'Your account was created. Log in to continue.' : 'For caregivers, OTs and SPED teachers.'}</p>
+    <section className="auth-intro"><Brand reversed /><h1>A clear day,<br />one step at a time.</h1><p>Visual schedules and picture cards</p><img className="auth-hero-sun" src="/araw/brand/peeking-sun-clouds.svg" alt="" aria-hidden="true" /></section>
+    <form className={`auth-card ${register ? 'auth-card--register' : 'auth-card--login'}`} onSubmit={submit}><div className="auth-mobile-logo"><Brand /></div><h2>{register ? 'Create your account' : 'Welcome back'}</h2><p>{registered ? 'Your account was created. Log in to continue.' : 'For caregivers, OTs and SPED teachers.'}</p>
       <fieldset className="workspace-lock" disabled={busy}>
-        {register && <label>Name<input required maxLength={100} value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" /></label>}
-        <label>Email<input required type="email" maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></label>
-        <label>Password<input required minLength={register ? 8 : 1} maxLength={72} type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={register ? 'new-password' : 'current-password'} /></label>
-        {register && <fieldset><legend>Role</legend>{(['caregiver', 'ot', 'sped_teacher'] as const).map((item) => <label className={`auth-role ${role === item ? 'selected' : ''}`} key={item}><input type="radio" name="role" checked={role === item} onChange={() => setRole(item)} />{item === 'caregiver' ? 'Caregiver' : item === 'ot' ? 'OT' : 'SPED Teacher'}</label>)}</fieldset>}
-        <label className="auth-role"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />Remember me on this device</label>
+        {register && <label className="auth-field auth-field--name">Name<input required maxLength={100} value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" placeholder="Enter your name" /></label>}
+        <label className="auth-field auth-field--email">Email<input required type="email" maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder="Enter your email" /></label>
+        <label className="auth-field auth-field--password">Password<input required minLength={register ? 8 : 1} maxLength={72} type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={register ? 'new-password' : 'current-password'} placeholder={register ? 'Create a password' : 'Enter your password'} /></label>
+        {register && <fieldset className="auth-role-group"><legend>Role</legend>{(['caregiver', 'ot', 'sped_teacher'] as const).map((item) => <label className={`auth-role ${role === item ? 'selected' : ''}`} key={item}><input type="radio" name="role" checked={role === item} onChange={() => setRole(item)} />{item === 'caregiver' ? 'Caregiver' : item === 'ot' ? 'OT' : 'SPED Teacher'}</label>)}</fieldset>}
+        <label className="auth-role auth-remember"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />Remember me on this device</label>
         {error && <div className="auth-error" role="alert">{error}</div>}
         <button className="button button-primary" type="submit">{busy ? 'Please wait…' : register ? 'Create account' : 'Log in'}</button>
         <button className="button button-outline" type="button" onClick={() => { setError(''); setRegistered(false); onPage(register ? 'login' : 'register'); }}>{register ? 'Back to log in' : 'Create an account'}</button>
@@ -159,9 +151,13 @@ export function App() {
   const banner = message && <div className="auth-error" role="alert"><p>{message}</p><button className="button button-outline" onClick={() => setMessage('')}>Dismiss</button><button className="button button-outline" onClick={() => { if (window.confirm('Reload saved data? Unsaved drafts will be discarded.')) { setMessage(''); setRetry((value) => value + 1); } }}>Reload saved data</button></div>;
   if (!token || page === 'login' || page === 'register') return <div className={rootClass}>{banner}<AuthScreen key={page} page={page === 'register' ? 'register' : 'login'} onPage={navigate} onLogin={(value, remember) => { const previous = tokenRef.current; epoch.current++; tokenRef.current = value; setLoading(true); if (!writeToken(value, remember, previous)) setMessage('Signed in for this tab only. Browser storage is unavailable.'); setData(emptyData()); setToken(value); navigate('dashboard'); }} /></div>;
   if (loading || loadError || !data.user) return <main className={rootClass} aria-busy={loading}><div className="staff-main"><Brand /><p role={loadError ? 'alert' : 'status'}>{loadError || 'Loading your workspace…'}</p>{!loading && <button className="button button-primary" onClick={() => setRetry((value) => value + 1)}>Retry</button>}<button className="button button-outline" onClick={() => logout()}>Log out</button></div></main>;
-  const content = page === 'child' ? <ChildView data={data} selectedChildId={selectedChildId} today={today} actions={actions} /> : <>
-    <header className="staff-header"><Brand /><span className="staff-workspace-label">Staff workspace</span><div className="staff-account"><span>{data.user.name}</span><span>{data.user.role === 'caregiver' ? 'Caregiver' : data.user.role === 'ot' ? 'OT' : 'SPED Teacher'}</span></div><button className="button button-outline staff-logout" onClick={() => logout()}>Log out</button><button className="button button-outline staff-menu-button" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? 'Close' : 'Menu'}</button></header>
-    <div className="staff-layout"><nav className={`staff-nav ${menuOpen ? 'open' : ''}`} aria-label="Staff navigation"><div className="staff-nav-items">{navItems.map((item) => <button className={`staff-nav-link ${page === item.page || item.page === 'schedules' && page === 'tasks' ? 'active' : ''}`} key={item.page} onClick={() => navigate(item.page)}><span className="staff-nav-icon"><img src={item.icon} alt="" /></span><span>{item.label}</span></button>)}<button className="button button-outline" onClick={() => logout()}>Log out</button></div></nav><main className="staff-main">{page === 'schedules' || page === 'tasks' ? <SchedulePages key={selectedChildId} page={page} data={data} selectedChildId={selectedChildId} today={today} actions={actions} /> : <StaffPages page={page} data={data} selectedChildId={selectedChildId} today={today} actions={actions} />}</main></div>
-  </>;
+  const content = page === 'child' ? <ChildView data={data} selectedChildId={selectedChildId} today={today} actions={actions} /> : <StaffLayout
+    user={data.user}
+    page={page as StaffPage}
+    menuOpen={menuOpen}
+    onMenuToggle={() => setMenuOpen((open) => !open)}
+    onNavigate={(next) => navigate(next)}
+    onLogout={() => logout()}
+  >{page === 'schedules' || page === 'tasks' ? <SchedulePages key={selectedChildId} page={page} data={data} selectedChildId={selectedChildId} today={today} actions={actions} /> : <StaffPages page={page} data={data} selectedChildId={selectedChildId} today={today} actions={actions} />}</StaffLayout>;
   return <div className={rootClass} aria-busy={busy}>{banner}{busy && <div className="request-status" role="status">Saving…</div>}<fieldset className="workspace-lock" disabled={busy}>{content}</fieldset></div>;
 }

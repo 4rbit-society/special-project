@@ -34,20 +34,24 @@ const categoryIcons: Record<Category, string> = {
 
 function taskIllustration(task: ScheduleTask): string {
   const title = task.name.toLowerCase();
-  if (title.includes('wake')) return 'clock';
-  if (title.includes('brush')) return 'brush';
-  if (title.includes('breakfast') || title.includes('rice') || title.includes('eat')) return 'rice';
-  if (title.includes('dress') || title.includes('shirt')) return 'shirt';
+  if (title.includes('wake')) return '/araw/picture-cards/card-wake-up-clock.svg';
+  if (title.includes('brush')) return '/araw/picture-cards/card-brush-teeth-blue.svg';
+  if (title.includes('wash hands')) return '/araw/picture-cards/card-wash-hands-soap.svg';
+  if (title.includes('breakfast') || title.includes('rice') || title.includes('eat')) return '/araw/picture-cards/card-eat-breakfast-bowl.svg';
+  if (title.includes('dress') || title.includes('shirt')) return '/araw/picture-cards/card-get-dressed-shirt.svg';
   if (title.includes('learn') || title.includes('read') || title.includes('book')) return 'book';
   if (title.includes('play')) return 'play';
   if (title.includes('school')) return 'school';
-  if (title.includes('toilet')) return 'toilet';
+  if (title.includes('toilet')) return '/araw/picture-cards/card-toilet.svg';
   if (title.includes('water')) return 'water';
   return task.icon;
 }
 
 function Illustration({ icon, variant = 'tile' }: { icon: string; variant?: 'tile' | 'large' | 'next' | 'nav' }) {
   const named = illustrations[icon];
+  const pictureCardIcon = variant === 'next' && icon === '/araw/picture-cards/card-wash-hands-soap.svg'
+    ? '/araw/picture-cards/card-wash-hands-bubbles.svg'
+    : icon;
   const specific = variant === 'large' && ['book', 'play'].includes(icon)
     ? `${icon}-large`
     : variant === 'next' && icon === 'play'
@@ -58,7 +62,7 @@ function Illustration({ icon, variant = 'tile' }: { icon: string; variant?: 'til
 
   return (
     <span className={`child-illustration child-illustration--${variant} ${icon === 'book' ? 'child-illustration--school' : ''}`} aria-hidden="true">
-      {specific ? <img src={asset(specific)} alt="" /> : icon.startsWith('/assets/') ? <img src={icon} alt="" /> : <span className="child-emoji">{icon || '⭐'}</span>}
+      {specific ? <img src={asset(specific)} alt="" /> : pictureCardIcon.startsWith('/') ? <img src={pictureCardIcon} alt="" /> : <span className="child-emoji">{icon || '⭐'}</span>}
     </span>
   );
 }
@@ -204,7 +208,7 @@ export function ChildView({ data, selectedChildId, today, actions, preview }: Sh
     <main className={`child-view ${data.preferences.contrast === 'high' ? 'child-view--high-contrast' : ''} child-view--text-${data.preferences.fontSize}`}>
       <div className="child-content">{preview && <p role="status">Preview · {today} · Changes are not saved</p>}
         <header className="child-header">
-          <span className="child-mascot" aria-hidden="true"><img src={asset(section === 'talk' ? 'mascot-listen' : 'mascot-wave')} alt="" /></span>
+          <span className="child-mascot" aria-hidden="true">{child.avatar === '🐱' ? <img src="/araw/avatars/avatar-cat-svg.svg" alt="" /> : <span>{child.avatar}</span>}</span>
           <h1>{child.name}’s day</h1>
           <button className="child-exit-button" aria-label="Return to staff workspace" title="Return to staff workspace" onClick={() => setConfirmExit(true)}>
             <img src={asset('logout')} alt="" />

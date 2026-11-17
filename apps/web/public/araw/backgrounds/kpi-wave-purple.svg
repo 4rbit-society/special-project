@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 150" fill="none">
+  <defs>
+    <linearGradient id="kpi-purple-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F3ECFF"/>
+      <stop offset="100%" stop-color="#E3D4FF"/>
+    </linearGradient>
+    <clipPath id="kpi-purple-clip">
+      <rect width="320" height="150" rx="22"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#kpi-purple-clip)">
+    <rect width="320" height="150" fill="url(#kpi-purple-bg)"/>
+    <path d="M155 150C205 106 268 110 320 126V150H155Z" fill="#CBB0FF" opacity="0.55"/>
+    <path d="M0 128C60 105 135 128 190 150H0V128Z" fill="#D9C4FF" opacity="0.45"/>
+  </g>
+</svg>

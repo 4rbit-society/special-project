@@ -47,7 +47,7 @@ export function ProgressPage({ data, selectedChildId, actions }: SharedPageProps
   const mostCompleted = rankedActivities.filter((item) => item.completed > 0).slice(0, 3);
   const leastCompleted = [...rankedActivities].filter((item) => item.percentage < 100).sort((a, b) => a.percentage - b.percentage || a.completed - b.completed || b.total - a.total || a.name.localeCompare(b.name)).slice(0, 3);
   const activityRow = (item: ActivityProgressSummary['activities'][number], section: string) => <li key={`${section}-${item.name}`}>
-    <span className="progress-activity-icon" aria-hidden="true">{item.icon.startsWith('/assets/') ? <img src={item.icon} alt="" /> : item.icon}</span>
+    <span className="progress-activity-icon" aria-hidden="true">{item.icon.startsWith('/') ? <img src={item.icon} alt="" /> : item.icon}</span>
     <div className="progress-activity-body"><strong>{item.name}</strong><span>{item.completed} of {item.total} done</span><span className="progress-activity-track"><span style={{ width: `${item.percentage}%` }} /></span></div>
     <span className="progress-activity-percent">{item.percentage}%</span>
   </li>;
@@ -57,7 +57,7 @@ export function ProgressPage({ data, selectedChildId, actions }: SharedPageProps
       <label className="staff-field progress-child-select">Child<select value={child.id} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
     </header>
 
-    <div className="progress-week-heading"><div className="progress-child-identity"><span className="progress-avatar" aria-hidden="true">{child.avatar}</span><div><h2>{child.name}'s week</h2><p>{dateRangeLabel}</p></div></div><span className="progress-period">Last 7 days</span></div>
+    <div className="progress-week-heading"><div className="progress-child-identity"><span className="progress-avatar" aria-hidden="true">{child.avatar === '🐱' ? <img src="/araw/avatars/avatar-cat-svg.svg" alt="" /> : child.avatar}</span><div><h2>{child.name}'s week</h2><p>{dateRangeLabel}</p></div></div><span className="progress-period">Last 7 days</span></div>
 
     <div className="progress-metrics" aria-label="Weekly summary">
       <article className="progress-metric"><span className="progress-metric-icon blue" aria-hidden="true">↗</span><div><p>Weekly completion</p><strong>{total ? `${percent}%` : '—'}</strong><span>{total ? 'Across all scheduled activities' : 'No activities scheduled yet'}</span></div></article>
@@ -104,7 +104,7 @@ export function ProgressPage({ data, selectedChildId, actions }: SharedPageProps
     </section>
 
     <section className="progress-history staff-panel" aria-labelledby="progress-history-title"><div className="progress-section-heading"><div><h2 id="progress-history-title">Recent completions</h2><p>{selectedDate ? `For ${calendarDate(selectedDate, { weekday: 'long', day: 'numeric', month: 'long' })}` : 'A closer look at the steps they finished.'}</p></div><span className="progress-history-count">{completions.length} {completions.length === 1 ? 'activity' : 'activities'}</span></div>
-      {completions.length ? <ul className="progress-history-list">{completions.map((task) => <li key={task.task_id}><span className="progress-history-icon" aria-hidden="true">{task.icon.startsWith('/assets/') ? <img src={task.icon} alt="" /> : task.icon}</span><div className="progress-history-description"><strong>{task.name}</strong><time dateTime={task.completed_at}>{new Date(task.completed_at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</time></div><span className="progress-done"><span aria-hidden="true">✓ </span>Done</span></li>)}</ul>
+      {completions.length ? <ul className="progress-history-list">{completions.map((task) => <li key={task.task_id}><span className="progress-history-icon" aria-hidden="true">{task.icon.startsWith('/') ? <img src={task.icon} alt="" /> : task.icon}</span><div className="progress-history-description"><strong>{task.name}</strong><time dateTime={task.completed_at}>{new Date(task.completed_at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</time></div><span className="progress-done"><span aria-hidden="true">✓ </span>Done</span></li>)}</ul>
         : <div className="progress-history-empty"><span aria-hidden="true">✓</span><div><h3>{selectedDate ? 'No completions for this day yet' : 'Their next little win belongs here'}</h3><p>Completed activities will appear here as they finish their routine.</p></div></div>}
     </section>
   </div>;

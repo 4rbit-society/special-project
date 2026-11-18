@@ -1,6 +1,6 @@
 import { PREDEFINED_ICONS } from '@starter/shared/constants';
 import { ChildView } from './ChildView';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { DailySchedule, ScheduleTask, SharedPageProps } from './model';
 import './schedule.css';
 import { Modal } from './components/Modal';
@@ -55,6 +55,12 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
   const [mobileEditing, setMobileEditing] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
   const [copyDate, setCopyDate] = useState(previousDate(today));
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [childOpen, setChildOpen] = useState(false);
+  const [dateOpen, setDateOpen] = useState(false);
+  const [childValue, setChildValue] = useState(selectedChildId);
+  const [dateValue, setDateValue] = useState(today);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [customOpen, setCustomOpen] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customIcon, setCustomIcon] = useState('⭐');
@@ -88,6 +94,14 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
     window.addEventListener('beforeunload', beforeUnload);
     return () => { cleanup(); window.removeEventListener('beforeunload', beforeUnload); };
   }, [dirty, page, actions.setNavigationGuard]);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointer = (event: MouseEvent) => { if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setMenuOpen(false); };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onPointer); document.removeEventListener('keydown', onKey); };
+  }, [menuOpen]);
   function changeDate(next: string) { if (next && next !== date && (!dirty || page !== 'schedules' || window.confirm('Discard unsaved schedule changes?'))) setDate(next); }
   function withDetails(): ScheduleTask[] | undefined {
     if (!selected) return draft;
@@ -161,11 +175,17 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
     setNotice(`Copied ${source.tasks.length} activities from ${dateLabel(copyDate)} into the draft.`);
   }
 
+  function openChildModal() { setChildValue(selectedChildId); setChildOpen(true); setMenuOpen(false); }
+  function applyChild() { actions.selectChild(childValue); setChildOpen(false); }
+  function openDateModal() { setDateValue(date); setDateOpen(true); setMenuOpen(false); }
+  function applyDate() { changeDate(dateValue); setDateOpen(false); }
+  function openCopyModal() { setCopyDate(previousDate(date)); setCopyOpen(true); setMenuOpen(false); }
+  function openPreview() { setMenuOpen(false); const tasks = withDetails(); if (tasks) { setDraft(tasks); setPreviewOpen(true); } }
+  function openLibrary() { setShowLibrary(true); setMenuOpen(false); }
+
   if (!child) return <section className="schedule-empty"><h1>Schedules</h1><p>Add a child profile to get started.</p><button className="button button-primary" onClick={() => actions.navigate('profiles')}>Add child</button></section>;
 
   if (!ready) return <section><h1>Schedules</h1><p role={failed ? 'alert' : 'status'}>{failed ? 'Could not load this schedule.' : 'Loading schedule…'}</p>{failed && <button className="button button-primary" onClick={() => setReload((value) => value + 1)}>Retry</button>}</section>;
-
-  if (previewOpen) return <div><button className="button button-outline" onClick={() => setPreviewOpen(false)}>Back to editor</button><ChildView data={data} selectedChildId={selectedChildId} today={date} actions={{ ...actions, navigate: () => setPreviewOpen(false) }} preview={{ id: savedSchedule?.id ?? 'preview', childId: selectedChildId, date, tasks: draft }} /></div>;
 
   if (page === 'tasks') {
     const tasks = savedSchedule?.tasks ?? [];
@@ -191,40 +211,47 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
   }
 
   return <div className="schedule-page">
-    <header className="schedule-page-heading"><h1>Schedules</h1><p>{child.name} · {dateLabel(date, true)}</p></header>
+    <header className="schedule-page-heading" ref={menuRef}>
+      <div className="schedule-title-line">
+        <h1>Schedules</h1>
+        <button type="button" className="schedule-menu-trigger" aria-haspopup="menu" aria-expanded={menuOpen} aria-label="Schedule options" onClick={() => setMenuOpen((open) => !open)}>
+          <svg viewBox="0 0 4 18" aria-hidden="true"><circle cx="2" cy="2" r="1.7" /><circle cx="2" cy="9" r="1.7" /><circle cx="2" cy="16" r="1.7" /></svg>
+        </button>
+      </div>
+      <p>{child.name} · {dateLabel(date, true)}</p>
+      {menuOpen && <div className="schedule-menu-popover" role="menu">
+        <button type="button" role="menuitem" className="schedule-menu-item" onClick={openChildModal}><span>Child</span><strong>{child.name}</strong></button>
+        <button type="button" role="menuitem" className="schedule-menu-item" onClick={openDateModal}><span>Date</span><strong>{dateLabel(date)}</strong></button>
+        <span className="schedule-menu-sep" role="separator" />
+        <button type="button" role="menuitem" className="schedule-menu-item" onClick={openCopyModal}><span>Copy from date</span></button>
+        <button type="button" role="menuitem" className="schedule-menu-item" onClick={openPreview}><span>Preview</span></button>
+        <button type="button" role="menuitem" className="schedule-menu-item" onClick={openLibrary}><span>Activity library</span></button>
+      </div>}
+    </header>
     {notice && <div className={`schedule-notice ${notice === 'Schedule saved' ? 'success' : ''}`} role="status">{notice}</div>}
-    <div className="schedule-controls">
-      <label>Child<select value={selectedChildId} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-      <label>Date<input type="date" value={date} onChange={(event) => changeDate(event.target.value)} /></label>
-      <button className="button button-outline schedule-copy" onClick={() => { setCopyDate(previousDate(date)); setCopyOpen(true); }}>Copy from date</button>
-      <button className="button button-outline schedule-preview" onClick={() => { const tasks = withDetails(); if (tasks) { setDraft(tasks); setPreviewOpen(true); } }}>Preview</button>
-      <button className="button button-primary schedule-save-top" onClick={save}>Save schedule</button>
-    </div>
-    <div className="schedule-mobile-add"><button className="button button-primary" onClick={() => setShowLibrary(true)}>Add activity</button><button className="button button-outline" onClick={() => setCopyOpen(true)}>Copy from date</button></div>
-    {savedSchedule && <div className="schedule-controls"><label>Move saved schedule to date<input type="date" value={moveDate} onChange={(event) => setMoveDate(event.target.value)} /></label><button className="button button-outline schedule-manage" disabled={dirty || !moveDate || moveDate === date} onClick={async () => { if (await actions.moveSchedule(savedSchedule, moveDate)) setDate(moveDate); }}>Change date</button><button className="button button-danger schedule-manage" onClick={async () => { if (window.confirm('Delete this saved schedule and all its tasks?') && await actions.deleteSchedule(savedSchedule)) setReload((value) => value + 1); }}>Delete schedule</button></div>}
     <p className="schedule-count">{draft.length} {draft.length === 1 ? 'activity' : 'activities'}</p>
     <div className="schedule-columns">
-      <section className={`schedule-panel schedule-library ${showLibrary ? 'is-open' : ''}`}>
-        <div className="schedule-panel-header"><h2>Activity library</h2><button className="schedule-close" onClick={() => setShowLibrary(false)} aria-label="Close activity library">×</button></div>
-        <div className="schedule-library-items">{activities.map((activity) => <article className="schedule-library-item" key={activity.activityId}>
-          <div className="schedule-library-row"><ActivityIcon src={activity.icon} /><div><strong>{activity.name}</strong><CategoryChip category={activity.category} /></div></div>
-          <button className="button button-outline" onClick={() => add(activity)}>Add</button>
-        </article>)}</div>
-        <button className="button button-outline schedule-custom" onClick={() => { setCustomOpen(true); setShowLibrary(false); }}>Custom activity</button>
-      </section>
       <section className="schedule-panel schedule-ordered">
-        <h2>Today’s schedule</h2><p className="schedule-helper">Drag to reorder, or use Move up / Move down.</p>
+        <div className="schedule-ordered-head">
+          <div><h2>Today’s schedule</h2><p className="schedule-helper">Drag to reorder, or use Move up / Move down.</p></div>
+          <button className="button button-primary" onClick={openLibrary}>Add activity</button>
+        </div>
         <div className="schedule-tasks">{draft.length ? draft.map((task, index) => <article className={`schedule-task ${selectedTaskId === task.id ? 'selected' : ''}`} key={task.id} draggable onDragStart={(event) => event.dataTransfer.setData('text/plain', String(index))} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const value = event.dataTransfer.getData('text/plain'); if (!/^\d+$/.test(value)) return; const from = Number(value); if (from < 0 || from >= draft.length) return; setDraft((items) => { const next = [...items]; const [item] = next.splice(from, 1); next.splice(index, 0, item!); return next; }); }}>
           <div className="schedule-task-main"><strong className="schedule-task-number">{index + 1}</strong><ActivityIcon src={task.icon} /><div className="schedule-task-description"><strong>{task.name}</strong><span className={task.startTime ? '' : 'no-time'}>{task.startTime ? `${task.startTime}${task.duration ? ` · ${task.duration} min` : ''}` : 'Time not set'}</span></div><CategoryChip category={task.category} /></div>
           <div className="schedule-task-actions"><span className="schedule-grip" aria-hidden="true">⠿</span><button className="schedule-arrow" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move ${task.name} up`}>↑</button><button className="schedule-arrow" onClick={() => move(index, 1)} disabled={index === draft.length - 1} aria-label={`Move ${task.name} down`}>↓</button><button className="button button-outline schedule-mobile-move" onClick={() => move(index, -1)} disabled={index === 0}>Move up</button><button className="button button-outline schedule-mobile-move" onClick={() => move(index, 1)} disabled={index === draft.length - 1}>Move down</button><button className="button button-outline" onClick={() => { const tasks = withDetails(); if (!tasks) return; setDraft(tasks); setSelectedTaskId(task.id); setMobileEditing(true); }}>Edit</button><button className="button button-outline schedule-row-remove" onClick={() => remove(task.id)}>Remove</button></div>
-        </article>) : <div className="schedule-empty"><p>No activities added yet.</p><button className="button button-primary" onClick={() => setShowLibrary(true)}>Add activity</button></div>}</div>
+        </article>) : <div className="schedule-empty"><p>No activities added yet.</p></div>}</div>
       </section>
       <aside className={`schedule-panel schedule-details ${mobileEditing ? 'mobile-visible' : ''}`}>
         {selected ? <><h2>{selected.name}</h2><ActivityIcon src={selected.icon} /><p className="schedule-detail-category">{selected.category}</p><label>Start time (optional)<input type="time" value={time} onChange={(event) => setTime(event.target.value)} /></label><label>Duration (minutes)<input type="number" min="1" max="1440" value={duration} onChange={(event) => setDuration(event.target.value)} placeholder="Optional" /><small>Optional. Enter a positive number.</small></label><button className="button button-primary" onClick={applyDetails}>Apply to draft</button><button className="button button-outline" onClick={() => { setSelectedTaskId(null); setMobileEditing(false); }}>Cancel edit</button><button className="button button-danger" onClick={() => remove(selected.id)}>Remove from schedule</button></> : <><h2>Activity details</h2><p className="schedule-helper">Select an activity to edit its time or duration.</p></>}
       </aside>
     </div>
+    {savedSchedule && <div className="schedule-controls schedule-manage-row"><label>Move saved schedule to date<input type="date" value={moveDate} onChange={(event) => setMoveDate(event.target.value)} /></label><button className="button button-outline schedule-manage" disabled={dirty || !moveDate || moveDate === date} onClick={async () => { if (await actions.moveSchedule(savedSchedule, moveDate)) setDate(moveDate); }}>Change date</button><button className="button button-danger schedule-manage" onClick={async () => { if (window.confirm('Delete this saved schedule and all its tasks?') && await actions.deleteSchedule(savedSchedule)) setReload((value) => value + 1); }}>Delete schedule</button></div>}
     <div className="schedule-unsaved"><span><i />{dirty ? 'You have unsaved changes' : 'Schedule is up to date'}</span><div><button className="button button-outline" onClick={() => { setDraft(savedSchedule?.tasks.map((task) => ({ ...task })) ?? []); setSelectedTaskId(null); }}>Discard changes</button><button className="button button-primary" onClick={save}>Save schedule</button></div></div>
     <button className="schedule-status-link" onClick={() => actions.navigate('tasks')}>Recording what actually happened? Open Task status →</button>
+    {childOpen && <Modal titleId="child-title" onClose={() => setChildOpen(false)}><div className="schedule-modal"><h2 id="child-title">Switch child</h2><p>Choose whose schedule you want to edit.</p><label>Child<select value={childValue} onChange={(event) => setChildValue(Number(event.target.value))}>{data.children.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><div className="schedule-modal-actions"><button className="button button-outline" onClick={() => setChildOpen(false)}>Cancel</button><button className="button button-primary" onClick={applyChild}>Switch child</button></div></div></Modal>}
+    {dateOpen && <Modal titleId="date-title" onClose={() => setDateOpen(false)}><div className="schedule-modal"><h2 id="date-title">Choose date</h2><p>Pick the day you want to edit.</p><label>Date<input type="date" value={dateValue} onChange={(event) => setDateValue(event.target.value)} /></label><div className="schedule-modal-actions"><button className="button button-outline" onClick={() => setDateOpen(false)}>Cancel</button><button className="button button-primary" onClick={applyDate}>Go to date</button></div></div></Modal>}
+    {showLibrary && <Modal titleId="library-title" onClose={() => setShowLibrary(false)} className="schedule-dialog--wide"><div className="schedule-modal schedule-library-modal"><h2 id="library-title">Activity library</h2><p>Choose an activity to add to today’s schedule.</p><div className="schedule-library-items">{activities.map((activity) => <article className="schedule-library-item" key={activity.activityId}><div className="schedule-library-row"><ActivityIcon src={activity.icon} /><div><strong>{activity.name}</strong><CategoryChip category={activity.category} /></div></div><button className="button button-outline" onClick={() => add(activity)}>Add</button></article>)}</div><div className="schedule-modal-actions"><button className="button button-outline schedule-custom" onClick={() => { setShowLibrary(false); setCustomOpen(true); }}>Custom activity</button><button className="button button-primary" onClick={() => setShowLibrary(false)}>Done</button></div></div></Modal>}
+    {previewOpen && <Modal titleId="preview-title" onClose={() => setPreviewOpen(false)} className="schedule-dialog--preview"><div className="schedule-preview"><div className="schedule-preview-head"><h2 id="preview-title">Preview</h2><button className="button button-outline" onClick={() => setPreviewOpen(false)}>Back to editor</button></div><div className="schedule-preview-body"><ChildView data={data} selectedChildId={selectedChildId} today={date} actions={{ ...actions, navigate: () => setPreviewOpen(false) }} preview={{ id: savedSchedule?.id ?? 'preview', childId: selectedChildId, date, tasks: draft }} /></div></div></Modal>}
     {copyOpen && <Modal titleId="copy-title" onClose={() => setCopyOpen(false)}><div className="schedule-modal"><h2 id="copy-title">Copy schedule from date</h2><p>Choose a day to copy activities into this draft.</p><label>Source date<input type="date" value={copyDate} onChange={(event) => setCopyDate(event.target.value)} /></label><p role="status">{notice}</p><div className="schedule-modal-actions"><button className="button button-outline" onClick={() => setCopyOpen(false)}>Cancel</button><button className="button button-primary" onClick={copySchedule}>Copy schedule</button></div></div></Modal>}
     {customOpen && <Modal titleId="custom-title" onClose={() => setCustomOpen(false)}><form className="schedule-modal" onSubmit={(event) => { event.preventDefault(); if (!customName.trim()) return; if (add({ activityId: `custom-${Date.now()}`, name: customName.trim(), icon: customIcon, category: customCategory })) { setCustomName(''); setCustomOpen(false); } }}><h2 id="custom-title">Custom activity</h2><label>Name<input required maxLength={100} value={customName} onChange={(event) => setCustomName(event.target.value)} placeholder="Activity name" /></label><label>Picture<select value={customIcon} onChange={(event) => setCustomIcon(event.target.value)}>{PREDEFINED_ICONS.map((icon) => <option key={icon} value={icon}>{icon}</option>)}</select></label><label>Category<select value={customCategory} onChange={(event) => setCustomCategory(event.target.value)}>{['Hygiene', 'Food', 'School', 'Play', 'Other'].map((category) => <option key={category}>{category}</option>)}</select></label><div className="schedule-modal-actions"><button type="button" className="button button-outline" onClick={() => setCustomOpen(false)}>Cancel</button><button className="button button-primary" type="submit">Add activity</button></div></form></Modal>}
   </div>;

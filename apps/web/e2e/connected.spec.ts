@@ -9,6 +9,43 @@ async function register(page: Page) {
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Welcome to Araw', exact: true })).toBeVisible({ timeout: 15_000 });
 }
+async function openScheduleMenu(page: Page) {
+  await page.getByRole('button', { name: 'Schedule options', exact: true }).click();
+  await expect(page.getByRole('menu')).toBeVisible();
+}
+
+async function addFromLibrary(page: Page, name: string) {
+  await page.getByRole('button', { name: 'Add activity', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.locator('.schedule-library-item').filter({ hasText: name }).getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+}
+
+async function openScheduleDate(page: Page) {
+  await openScheduleMenu(page);
+  await page.getByRole('menuitem', { name: /^Date/ }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
+async function readScheduleDate(page: Page) {
+  const dialog = await openScheduleDate(page);
+  const value = await dialog.getByLabel('Date', { exact: true }).inputValue();
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  return value;
+}
+
+async function openPreview(page: Page) {
+  await openScheduleMenu(page);
+  await page.getByRole('menuitem', { name: 'Preview', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
 test('all mounted endpoints support a persisted browser workflow', async ({ page }) => {
   const endpoints = new Set<string>();
   page.on('request', (request) => { const path = new URL(request.url()).pathname; if (path.startsWith('/api/')) endpoints.add(`${request.method()} ${path.replace(/\/\d+(?=\/|$)/g, '/:id')}`); });
@@ -20,17 +57,23 @@ test('all mounted endpoints support a persisted browser workflow', async ({ page
   await page.getByRole('button', { name: 'Save child', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'River', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Create schedule', exact: true }).click();
-  await page.locator('.schedule-library-item').filter({ hasText: 'Brush teeth' }).getByRole('button', { name: 'Add', exact: true }).click();
-  await page.locator('.schedule-library-item').filter({ hasText: 'Play' }).getByRole('button', { name: 'Add', exact: true }).click();
+  await addFromLibrary(page, 'Brush teeth');
+  await addFromLibrary(page, 'Play');
   await page.getByRole('button', { name: 'Save schedule', exact: true }).first().click();
   await expect(page.getByText('Schedule saved', { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.locator('.schedule-task')).toHaveCount(2);
-  await page.getByRole('button', { name: 'Custom activity', exact: true }).click();
-  await page.getByRole('dialog').getByLabel('Name', { exact: true }).fill('Unsaved preview');
-  await page.getByRole('dialog').getByRole('button', { name: 'Add activity', exact: true }).click();
-  await page.getByRole('button', { name: 'Preview', exact: true }).click();
-  await expect(page.getByText('Unsaved preview', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Add activity', exact: true }).click();
+  const libraryDialog = page.getByRole('dialog');
+  await expect(libraryDialog).toBeVisible();
+  await libraryDialog.getByRole('button', { name: 'Custom activity', exact: true }).click();
+  const customDialog = page.getByRole('dialog');
+  await expect(customDialog).toBeVisible();
+  await customDialog.getByLabel('Name', { exact: true }).fill('Unsaved preview');
+  await customDialog.getByRole('button', { name: 'Add activity', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await openPreview(page);
+  await expect(page.getByRole('dialog')).toContainText('Unsaved preview');
   await expect(page.locator('.child-done-button')).toBeDisabled();
   await page.getByRole('button', { name: 'Back to editor', exact: true }).click();
   await expect(page.locator('.schedule-task')).toHaveCount(3);
@@ -75,15 +118,20 @@ test('all mounted endpoints support a persisted browser workflow', async ({ page
   await expect(page.getByRole('radio', { name: /Large/ })).toBeChecked();
   await expect(page.getByRole('radio', { name: 'Fast', exact: true })).toBeChecked();
   await page.getByRole('button', { name: 'Schedules', exact: true }).click();
-  const sourceDate = await page.getByLabel('Date', { exact: true }).inputValue();
-  await page.getByLabel('Date', { exact: true }).fill('2099-12-20');
-  await page.getByRole('button', { name: 'Copy from date', exact: true }).first().click();
-  await page.getByRole('dialog').getByLabel('Source date').fill(sourceDate);
+  const sourceDate = await readScheduleDate(page);
+  await openScheduleMenu(page);
+  await page.getByRole('menuitem', { name: /^Date/ }).click();
+  await page.getByRole('dialog').getByLabel('Date', { exact: true }).fill('2099-12-20');
+  await page.getByRole('button', { name: 'Go to date', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await openScheduleMenu(page);
+  await page.getByRole('menuitem', { name: /^Copy from date/ }).click();
+  await page.getByRole('dialog').getByLabel('Source date', { exact: true }).fill(sourceDate);
   await page.getByRole('button', { name: 'Copy schedule', exact: true }).click();
   await expect(page.getByText('Copied schedule saved', { exact: true })).toBeVisible();
   await page.getByLabel('Move saved schedule to date').fill('2099-12-21');
   await page.getByRole('button', { name: 'Change date', exact: true }).click();
-  await expect(page.getByLabel('Date', { exact: true })).toHaveValue('2099-12-21');
+  expect(await readScheduleDate(page)).toBe('2099-12-21');
   await page.getByRole('button', { name: 'Delete schedule', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Delete schedule', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Child Profiles', exact: true }).click();
@@ -120,7 +168,7 @@ test('mobile completion persists and signing into another account shows no previ
   await page.getByLabel('Name or nickname').fill('Mobile Child');
   await page.getByRole('button', { name: 'Save child', exact: true }).click();
   await page.getByRole('button', { name: 'Create schedule', exact: true }).click();
-  await page.getByRole('button', { name: 'Add activity', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Add activity', exact: true }).click();
   await page.locator('.schedule-library-item').filter({ hasText: 'Brush teeth' }).getByRole('button', { name: 'Add', exact: true }).click();
   await page.getByRole('button', { name: 'Save schedule', exact: true }).last().click();
   await expect(page.getByText('Schedule saved', { exact: true })).toBeVisible();
@@ -147,7 +195,7 @@ test('a failed save keeps the editor draft until the server confirms a retry', a
   await page.getByLabel('Name or nickname').fill('Retry Child');
   await page.getByRole('button', { name: 'Save child', exact: true }).click();
   await page.getByRole('button', { name: 'Create schedule', exact: true }).click();
-  await page.locator('.schedule-library-item').filter({ hasText: 'Play' }).getByRole('button', { name: 'Add', exact: true }).click();
+  await addFromLibrary(page, 'Play');
   await page.route('**/api/schedules', (route) => route.request().method() === 'PUT' ? route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"Temporary save failure"}' }) : route.continue());
   await page.getByRole('button', { name: 'Save schedule', exact: true }).first().click();
   await expect(page.getByRole('alert')).toContainText('Temporary save failure');
@@ -164,20 +212,24 @@ async function openEditor(page: Page) {
   await page.getByLabel('Name or nickname').fill('Debug Child');
   await page.getByRole('button', { name: 'Save child', exact: true }).click();
   await page.getByRole('button', { name: 'Create schedule', exact: true }).click();
-  await page.locator('.schedule-library-item').filter({ hasText: 'Play' }).getByRole('button', { name: 'Add', exact: true }).click();
+  await addFromLibrary(page, 'Play');
 }
 
 test('timing saves directly, protects drafts, and safely handles an empty date', async ({ page }) => {
   await openEditor(page);
   const errors: string[] = []; page.on('pageerror', (error) => errors.push(error.message));
-  const date = await page.getByLabel('Date', { exact: true }).inputValue();
+  const date = await readScheduleDate(page);
   await page.getByLabel('Start time (optional)').fill('09:15');
   await page.getByLabel('Duration (minutes)').fill('25');
   page.once('dialog', (dialog) => { void dialog.dismiss(); });
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
   await expect(page.getByLabel('Duration (minutes)')).toHaveValue('25');
-  await page.getByLabel('Date', { exact: true }).fill('');
-  await expect(page.getByLabel('Date', { exact: true })).toHaveValue(date);
+  await openScheduleMenu(page);
+  await page.getByRole('menuitem', { name: /^Date/ }).click();
+  await page.getByRole('dialog').getByLabel('Date', { exact: true }).fill('');
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect(await readScheduleDate(page)).toBe(date);
   await page.getByRole('button', { name: 'Save schedule', exact: true }).first().click();
   await expect(page.getByText('Schedule saved', { exact: true })).toBeVisible();
   await page.reload();
@@ -219,6 +271,8 @@ test('child timer counts down and plays the end cue when sound is on', async ({ 
 
 test('modal traps keyboard focus and Escape restores its opener', async ({ page }) => {
   await openEditor(page);
+  await page.getByRole('button', { name: 'Add activity', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByRole('button', { name: 'Custom activity', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
@@ -228,7 +282,7 @@ test('modal traps keyboard focus and Escape restores its opener', async ({ page 
   }
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Custom activity', exact: true })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Add activity', exact: true })).toBeFocused();
 });
 
 test('registration retries login without creating the account twice', async ({ page }) => {
@@ -269,7 +323,7 @@ test('stale timing conflicts retain the editor draft and the newer server timing
   const token = await page.evaluate(() => sessionStorage.getItem('araw-session-token-v1'));
   const headers = { Authorization: `Bearer ${token}` };
   const children = await (await page.request.get('/api/children', { headers })).json();
-  const date = await page.getByLabel('Date', { exact: true }).inputValue();
+  const date = await readScheduleDate(page);
   const schedule = await (await page.request.get(`/api/schedules?childId=${children[0].id}&date=${date}`, { headers })).json();
   expect((await page.request.put(`/api/tasks/${schedule.tasks[0].id}`, { headers, data: { duration_min: 40 } })).ok()).toBe(true);
   await page.locator('.schedule-task').getByRole('button', { name: 'Edit', exact: true }).click();

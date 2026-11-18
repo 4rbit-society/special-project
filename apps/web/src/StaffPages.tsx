@@ -74,10 +74,13 @@ function Dashboard({ data, selectedChildId, today, actions, onAddChild }: Props 
   </div></div>;
   return <div className="staff-page staff-dashboard">
     <header className="staff-dashboard-intro"><h1>Good morning, {data.user?.name ?? 'friend'}!</h1><p>Here's what's happening with your little learners today.</p></header>
-    <section className="staff-dashboard-summary staff-panel" aria-labelledby="dashboard-title"><h2 id="dashboard-title">Dashboard</h2><div className="staff-dashboard-summary-content">
-      <div className="staff-dashboard-action"><button className="staff-button primary" onClick={onAddChild}>Add child</button></div>
+    <section className="staff-dashboard-summary staff-panel" aria-labelledby="dashboard-title">
+      <div className="staff-dashboard-header-row">
+        <h2 id="dashboard-title">Dashboard</h2>
+        <div className="staff-dashboard-action"><button className="staff-button primary" onClick={onAddChild}>Add child</button></div>
+      </div>
       <Stats data={data} today={today} />
-    </div></section>
+    </section>
     <div className="staff-dashboard-bottom"><section className="staff-dashboard-children staff-panel"><h2>Your children</h2>
     <div className="staff-child-grid">{data.children.map((child) => {
       const schedule = data.schedules.find((item) => item.childId === child.id && item.date === today);

@@ -19,14 +19,6 @@ The screens now use the authenticated backend for profiles, schedules/tasks, car
 
 Verify the frontend with `npm run typecheck -w @starter/web` and `npm run build -w @starter/web`.
 
-Frontend API handoff: [endpoint inventory](docs/FRONTEND_ENDPOINTS.md), [request and response contracts](docs/FRONTEND_API_CONTRACTS.md), and [integration gaps](docs/FRONTEND_API_INTEGRATION.md).
-
-SRS API review: [all endpoints and requirement mappings](docs/SRS_ENDPOINTS.md).
-
-Backend API review: [implemented endpoints, contracts and storage limits](docs/BACKEND_ENDPOINTS.md).
-
-Combined API review: [frontend/SRS/backend endpoint cross-reference, connections and gaps](docs/ENDPOINT_CROSS_REFERENCE.md).
-
 ```text
 apps/
   api/

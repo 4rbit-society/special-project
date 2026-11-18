@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 
-export function Modal({ titleId, onClose, children }: { titleId: string; onClose: () => void; children: ReactNode }) {
+export function Modal({ titleId, onClose, className = '', children }: { titleId: string; onClose: () => void; className?: string; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
   const closeRef = useRef(onClose); closeRef.current = onClose;
   useEffect(() => {
@@ -9,7 +9,7 @@ export function Modal({ titleId, onClose, children }: { titleId: string; onClose
     dialog.showModal();
     return () => { dialog.close(); if (previous?.isConnected) previous.focus(); };
   }, []);
-  return <dialog ref={ref} className="schedule-dialog" aria-labelledby={titleId} onKeyDown={(event) => {
+  return <dialog ref={ref} className={`schedule-dialog ${className}`.trim()} aria-labelledby={titleId} onKeyDown={(event) => {
     if (event.key !== 'Tab') return;
     const targets = [...ref.current!.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]')].filter((element) => element.getClientRects().length > 0);
     const first = targets[0]; const last = targets[targets.length - 1];

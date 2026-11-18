@@ -53,8 +53,14 @@ export function ProgressPage({ data, selectedChildId, actions }: SharedPageProps
   </li>;
 
   return <div className="staff-page staff-progress-page progress-page">
-    <header className="progress-heading"><div><h1>Progress</h1><p>Small steps, one day at a time.</p></div>
-      <label className="staff-field progress-child-select">Child<select value={child.id} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+    <header className="progress-heading"><div><div className="progress-title-row"><h1>Progress</h1>
+      <label className="staff-picker">
+        <span className="staff-picker-avatar" aria-hidden="true">{child.avatar === '🐱' ? <img src="/araw/avatars/avatar-cat-svg.svg" alt="" /> : child.avatar}</span>
+        <span className="staff-picker-label">{child.name}</span>
+        <svg className="staff-picker-chevron" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5 6 6.5l5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        <select aria-label="Child" value={child.id} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+      </label>
+    </div><p>Small steps, one day at a time.</p></div>
     </header>
 
     <div className="progress-week-heading"><div className="progress-child-identity"><span className="progress-avatar" aria-hidden="true">{child.avatar === '🐱' ? <img src="/araw/avatars/avatar-cat-svg.svg" alt="" /> : child.avatar}</span><div><h2>{child.name}'s week</h2><p>{dateRangeLabel}</p></div></div><span className="progress-period">Last 7 days</span></div>
@@ -94,8 +100,14 @@ export function ProgressPage({ data, selectedChildId, actions }: SharedPageProps
 
     <section className="progress-activities staff-panel" aria-labelledby="progress-activities-title">
       <div className="progress-section-heading">
-        <div><h2 id="progress-activities-title">Activity patterns</h2><p>Most and least completed over the selected period.</p></div>
-        <label className="staff-field progress-range">Period<select value={range} onChange={(event) => setRange(event.target.value as ProgressRange)}><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></select></label>
+        <div><div className="progress-title-row"><h2 id="progress-activities-title">Activity patterns</h2>
+          <label className="staff-picker progress-period-picker">
+            <svg className="progress-period-picker-icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.75" y="3.25" width="12.5" height="11" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.5" /><path d="M1.75 6.75h12.5M5.25 1.75v3M10.75 1.75v3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+            <span>{range === '7d' ? 'Last 7 days' : 'Last 30 days'}</span>
+            <svg className="staff-picker-chevron" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5 6 6.5l5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            <select aria-label="Period" value={range} onChange={(event) => setRange(event.target.value as ProgressRange)}><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></select>
+          </label>
+        </div><p>Most and least completed over the selected period.</p></div>
       </div>
       {!activityProgress ? <p role="status">Loading activity patterns…</p> : rankedActivities.length === 0 ? <p className="progress-activities-empty">Complete a few scheduled activities to see patterns here.</p> : <div className="progress-activity-grid">
         <section aria-labelledby="most-completed-title"><h3 id="most-completed-title">Most completed</h3>{mostCompleted.length ? <ul className="progress-activity-list">{mostCompleted.map((item) => activityRow(item, 'most'))}</ul> : <p className="progress-activities-empty">No completed activities yet.</p>}</section>

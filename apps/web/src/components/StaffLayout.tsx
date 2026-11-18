@@ -3,10 +3,10 @@ import type { ReactNode } from 'react';
 import type { StaffPage } from '../model';
 import { ArawIcon, Brand, Button } from './ui';
 
-const navItems: { page: StaffPage; label: string; icon: string }[] = [
+const navItems: { page: StaffPage; label: string; icon: string; activeIcon?: string }[] = [
   { page: 'dashboard', label: 'Dashboard', icon: 'dashboard-grid' },
   { page: 'profiles', label: 'Child Profiles', icon: 'child-profiles' },
-  { page: 'schedules', label: 'Schedules', icon: 'schedules-calendar' },
+  { page: 'schedules', label: 'Schedules', icon: 'schedules-calendar', activeIcon: 'schedules-calendar-outline' },
   { page: 'progress', label: 'Progress', icon: 'progress-bars' },
   { page: 'settings', label: 'Settings', icon: 'settings-gear' },
 ];
@@ -33,7 +33,7 @@ export function StaffLayout({
         {navItems.map((item) => {
           const active = page === item.page || (item.page === 'schedules' && page === 'tasks');
           return <button type="button" className={`staff-nav-link ${active ? 'active' : ''}`} key={item.page} aria-current={active ? 'page' : undefined} onClick={() => onNavigate(item.page)}>
-            <span className="staff-nav-icon"><ArawIcon name={item.icon} /></span><span>{item.label}</span>
+            <span className="staff-nav-icon"><ArawIcon name={active && item.activeIcon ? item.activeIcon : item.icon} /></span><span>{item.label}</span>
           </button>;
         })}
         <Button className="staff-nav-logout" variant="outline" leadingIcon="logout" onClick={onLogout}>Log out</Button>

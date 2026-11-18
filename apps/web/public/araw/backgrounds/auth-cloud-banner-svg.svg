@@ -1,19 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 680" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 680" preserveAspectRatio="none" fill="none">
   <defs>
     <linearGradient id="pp-auth-card" x1="15%" y1="0%" x2="85%" y2="100%">
       <stop offset="0%" stop-color="#3AD8E2"/>
       <stop offset="55%" stop-color="#1AC2CE"/>
       <stop offset="100%" stop-color="#35DCCB"/>
     </linearGradient>
-    <clipPath id="pp-auth-clip">
-      <rect x="0" y="0" width="520" height="680" rx="46"/>
-    </clipPath>
   </defs>
-  <g clip-path="url(#pp-auth-clip)">
-    <rect width="520" height="680" fill="url(#pp-auth-card)"/>
-    <path d="M-30 330C45 270 155 275 215 330C290 250 435 255 545 335V680H-30V330Z" fill="#FFFFFF" opacity="0.12"/>
-    <path d="M-20 565C95 490 245 500 350 568C415 522 485 520 540 558V690H-20V565Z" fill="#63E7D4"/>
-    <path d="M175 612C280 545 415 548 540 608V690H175V612Z" fill="#8EF2E2"/>
-    <path d="M-20 622C22 572 96 572 138 606C178 566 254 570 288 616C330 584 395 595 426 636C462 614 508 620 540 652V690H-20V622Z" fill="#FFFFFF"/>
-  </g>
+  <rect width="520" height="680" fill="url(#pp-auth-card)"/>
+  <path d="M-30 330C45 270 155 275 215 330C290 250 435 255 545 335V680H-30V330Z" fill="#FFFFFF" opacity="0.12"/>
+  <path d="M-20 565C95 490 245 500 350 568C415 522 485 520 540 558V690H-20V565Z" fill="#63E7D4"/>
+  <path d="M175 612C280 545 415 548 540 608V690H175V612Z" fill="#8EF2E2"/>
+  <path d="M-20 622C22 572 96 572 138 606C178 566 254 570 288 616C330 584 395 595 426 636C462 614 508 620 540 652V690H-20V622Z" fill="#FFFFFF"/>
 </svg>

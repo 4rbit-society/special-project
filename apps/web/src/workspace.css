@@ -111,7 +111,7 @@
 .progress-avatar { border-radius:50%; overflow:hidden; background:transparent; }
 .progress-avatar img { width:100%; height:100%; object-fit:contain; }
 .progress-overview { grid-template-columns:minmax(0,1.7fr) minmax(310px,.9fr); }
-.progress-page .progress-today { background:#fff url('/araw/illustrations/giraffe-mascot-svg.svg') right bottom / 140px auto no-repeat; background-origin: border-box; overflow: hidden; }
+.progress-page .progress-today { background:#fff url('/araw/illustrations/giraffe-mascot-svg.svg') right bottom / 140px auto no-repeat; background-origin: border-box; overflow: hidden; padding-bottom: 0; }
 .progress-today>.staff-button { max-width:250px; }
 .progress-history-icon img { object-fit:contain; }
 

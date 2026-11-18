@@ -56,7 +56,7 @@ export function ProgressPage({ data, selectedChildId, actions }: SharedPageProps
     <header className="progress-heading"><div><div className="progress-title-row"><h1>Progress</h1>
       <label className="staff-picker">
         <span className="staff-picker-avatar" aria-hidden="true">{child.avatar === '🐱' ? <img src="/araw/avatars/avatar-cat-svg.svg" alt="" /> : child.avatar}</span>
-        <span>{child.name}</span>
+        <span className="staff-picker-label">{child.name}</span>
         <svg className="staff-picker-chevron" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5 6 6.5l5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         <select aria-label="Child" value={child.id} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
       </label>

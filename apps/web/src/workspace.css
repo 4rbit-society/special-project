@@ -111,7 +111,7 @@
 .progress-avatar { border-radius:50%; overflow:hidden; background:transparent; }
 .progress-avatar img { width:100%; height:100%; object-fit:contain; }
 .progress-overview { grid-template-columns:minmax(0,1.7fr) minmax(310px,.9fr); }
-.progress-page .progress-today { background:#fff url('/araw/illustrations/giraffe-mascot-svg.svg') right bottom / 34% auto no-repeat; }
+.progress-page .progress-today { background:#fff url('/araw/illustrations/giraffe-mascot-svg.svg') right bottom / 50% auto no-repeat; overflow: hidden; }
 .progress-today>.staff-button { max-width:250px; }
 .progress-history-icon img { object-fit:contain; }
 
@@ -197,7 +197,7 @@
   .schedule-details { display:none; }
   .schedule-details.mobile-visible { display:flex; }
   .progress-overview { grid-template-columns:1fr; }
-  .progress-today { background-size:110px auto; }
+  .progress-today { background-size:160px auto; }
   .staff-settings-lead { display:block; }
   .staff-settings-form { border:1px solid var(--araw-border-soft); padding:18px; background:#fff; }
   .staff-settings-form>.staff-field { display:flex; flex-direction:column; align-items:stretch; }

@@ -1,36 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
   <defs>
-    <radialGradient id="araw-sun-logo-face" cx="42%" cy="35%" r="65%">
-      <stop offset="0%" stop-color="#FFF08A"/>
-      <stop offset="55%" stop-color="#FFD43B"/>
-      <stop offset="100%" stop-color="#F59F00"/>
+    <radialGradient id="pp-sun-face" cx="42%" cy="34%" r="65%">
+      <stop offset="0%" stop-color="#FFF5A6"/>
+      <stop offset="56%" stop-color="#FFD43B"/>
+      <stop offset="100%" stop-color="#F79E1B"/>
     </radialGradient>
-    <linearGradient id="araw-sun-logo-rays" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FFE066"/>
-      <stop offset="100%" stop-color="#F7A600"/>
+    <linearGradient id="pp-sun-ray" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#FFE169"/>
+      <stop offset="100%" stop-color="#F7A01B"/>
     </linearGradient>
+    <filter id="pp-sun-glow" x="-12%" y="-12%" width="124%" height="128%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#F59F00" flood-opacity="0.22"/>
+    </filter>
   </defs>
-  <g fill="url(#araw-sun-logo-rays)">
-    <rect x="70" y="6" width="20" height="24" rx="10"/>
-    <rect x="70" y="130" width="20" height="24" rx="10"/>
-    <rect x="6" y="70" width="24" height="20" rx="10"/>
-    <rect x="130" y="70" width="24" height="20" rx="10"/>
-    <rect x="70" y="6" width="20" height="24" rx="10" transform="rotate(36 80 80)"/>
-    <rect x="70" y="6" width="20" height="24" rx="10" transform="rotate(72 80 80)"/>
-    <rect x="70" y="6" width="20" height="24" rx="10" transform="rotate(108 80 80)"/>
-    <rect x="70" y="6" width="20" height="24" rx="10" transform="rotate(144 80 80)"/>
-    <rect x="70" y="6" width="20" height="24" rx="10" transform="rotate(216 80 80)"/>
-    <rect x="70" y="6" width="20" height="24" rx="10" transform="rotate(252 80 80)"/>
-    <rect x="70" y="6" width="20" height="24" rx="10" transform="rotate(288 80 80)"/>
-    <rect x="70" y="6" width="20" height="24" rx="10" transform="rotate(324 80 80)"/>
+  <g filter="url(#pp-sun-glow)">
+    <g fill="url(#pp-sun-ray)">
+      <path d="M74 17C76.2 9.5 83.8 9.5 86 17L92.5 34.5H67.5L74 17Z"/>
+      <path d="M74 17C76.2 9.5 83.8 9.5 86 17L92.5 34.5H67.5L74 17Z" transform="rotate(30 80 80)"/>
+      <path d="M74 17C76.2 9.5 83.8 9.5 86 17L92.5 34.5H67.5L74 17Z" transform="rotate(60 80 80)"/>
+      <path d="M74 17C76.2 9.5 83.8 9.5 86 17L92.5 34.5H67.5L74 17Z" transform="rotate(90 80 80)"/>
+      <path d="M74 17C76.2 9.5 83.8 9.5 86 17L92.5 34.5H67.5L74 17Z" transform="rotate(120 80 80)"/>
+      <path d="M74 17C76.2 9.5 83.8 9.5 86 17L92.5 34.5H67.5L74 17Z" transform="rotate(150 80 80)"/>
+      <path d="M74 17C76.2 9.5 83.8 9.5 86 17L92.5 34.5H67.5L74 17Z" transform="rotate(180 80 80)"/>
+      <path d="M74 17C76.2 9.5 83.8 9.5 86 17L92.5 34.5H67.5L74 17Z" transform="rotate(210 80 80)"/>
+      <path d="M74 17C76.2 9.5 83.8 9.5 86 17L92.5 34.5H67.5L74 17Z" transform="rotate(240 80 80)"/>
+      <path d="M74 17C76.2 9.5 83.8 9.5 86 17L92.5 34.5H67.5L74 17Z" transform="rotate(270 80 80)"/>
+      <path d="M74 17C76.2 9.5 83.8 9.5 86 17L92.5 34.5H67.5L74 17Z" transform="rotate(300 80 80)"/>
+      <path d="M74 17C76.2 9.5 83.8 9.5 86 17L92.5 34.5H67.5L74 17Z" transform="rotate(330 80 80)"/>
+    </g>
+    <circle cx="80" cy="80" r="46.5" fill="url(#pp-sun-face)"/>
+    <circle cx="64.5" cy="77.5" r="4.3" fill="#231914"/>
+    <circle cx="95.5" cy="77.5" r="4.3" fill="#231914"/>
+    <ellipse cx="53.5" cy="86.5" rx="7" ry="4.2" fill="#FF7C8A" opacity="0.72"/>
+    <ellipse cx="106.5" cy="86.5" rx="7" ry="4.2" fill="#FF7C8A" opacity="0.72"/>
+    <path d="M72 86.5C74.5 92.2 85.5 92.2 88 86.5" stroke="#231914" stroke-width="3.6" stroke-linecap="round"/>
   </g>
-  <circle cx="80" cy="80" r="50" fill="url(#araw-sun-logo-face)" stroke="#F59F00" stroke-width="2.5"/>
-  <ellipse cx="62" cy="52" rx="14" ry="7" transform="rotate(-24 62 52)" fill="#FFF9DB" opacity="0.65"/>
-  <circle cx="62" cy="76" r="4.8" fill="#1C274C"/>
-  <circle cx="98" cy="76" r="4.8" fill="#1C274C"/>
-  <circle cx="63.5" cy="74.5" r="1.4" fill="#FFFFFF"/>
-  <circle cx="99.5" cy="74.5" r="1.4" fill="#FFFFFF"/>
-  <ellipse cx="52" cy="86" rx="7.5" ry="4.5" fill="#FF7A7A" opacity="0.72"/>
-  <ellipse cx="108" cy="86" rx="7.5" ry="4.5" fill="#FF7A7A" opacity="0.72"/>
-  <path d="M70 86C72.5 92.5 87.5 92.5 90 86" stroke="#1C274C" stroke-width="4" stroke-linecap="round"/>
 </svg>

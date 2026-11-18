@@ -1,27 +1,32 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" fill="none">
-  <!-- Soft cloud backdrop -->
-  <path d="M24 162C24 140 42 126 62 130C74 108 106 104 126 120C148 104 182 110 194 134C212 132 224 146 224 162H24Z" fill="#E3F2FD"/>
-  <!-- Yellow bursts -->
+  <defs>
+    <linearGradient id="pp-cal-head" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#288AF5"/>
+      <stop offset="100%" stop-color="#1458C2"/>
+    </linearGradient>
+    <filter id="pp-cal-shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#4A90E2" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+  <path d="M20 164C20 140 40 124 62 128C74 104 108 100 128 118C150 100 186 108 198 134C216 132 228 146 228 164H20Z" fill="#DCEEFF"/>
   <g fill="#FFD43B">
-    <rect x="176" y="42" width="24" height="7" rx="3.5" transform="rotate(-48 176 42)"/>
-    <rect x="190" y="60" width="26" height="7" rx="3.5" transform="rotate(-18 190 60)"/>
-    <rect x="188" y="84" width="20" height="7" rx="3.5" transform="rotate(14 188 84)"/>
+    <rect x="176" y="34" width="26" height="7.5" rx="3.75" transform="rotate(-46 189 38)"/>
+    <rect x="190" y="56" width="28" height="7.5" rx="3.75" transform="rotate(-18 204 60)"/>
+    <rect x="188" y="80" width="22" height="7.5" rx="3.75" transform="rotate(14 199 84)"/>
   </g>
-  <!-- Calendar body -->
-  <rect x="52" y="44" width="118" height="106" rx="18" fill="#FFFFFF" stroke="#90C2F9" stroke-width="3"/>
-  <path d="M52 62C52 52.0589 60.0589 44 70 44H152C161.941 44 170 52.0589 170 62V76H52V62Z" fill="#1D72E8"/>
-  <!-- Spiral rings -->
-  <rect x="74" y="34" width="8" height="20" rx="4" fill="#134CA6"/>
-  <rect x="107" y="34" width="8" height="20" rx="4" fill="#134CA6"/>
-  <rect x="140" y="34" width="8" height="20" rx="4" fill="#134CA6"/>
-  <!-- Grid cells -->
-  <rect x="68" y="90" width="18" height="14" rx="4" fill="#DCEEFF"/>
-  <rect x="94" y="90" width="18" height="14" rx="4" fill="#DCEEFF"/>
-  <rect x="120" y="90" width="18" height="14" rx="4" fill="#46D1B8"/>
-  <rect x="68" y="112" width="18" height="14" rx="4" fill="#DCEEFF"/>
-  <rect x="94" y="112" width="18" height="14" rx="4" fill="#DCEEFF"/>
-  <rect x="120" y="112" width="18" height="14" rx="4" fill="#DCEEFF"/>
-  <!-- Clock badge -->
+  <g transform="rotate(-6 111 97)" filter="url(#pp-cal-shadow)">
+    <rect x="52" y="44" width="118" height="106" rx="20" fill="#FFFFFF" stroke="#9AC8FB" stroke-width="2.5"/>
+    <path d="M52 64C52 52.9543 60.9543 44 72 44H150C161.046 44 170 52.9543 170 64V76H52V64Z" fill="url(#pp-cal-head)"/>
+    <rect x="74" y="34" width="8" height="20" rx="4" fill="#134CA6"/>
+    <rect x="107" y="34" width="8" height="20" rx="4" fill="#134CA6"/>
+    <rect x="140" y="34" width="8" height="20" rx="4" fill="#134CA6"/>
+    <rect x="68" y="90" width="18" height="14" rx="4" fill="#DCEEFF"/>
+    <rect x="94" y="90" width="18" height="14" rx="4" fill="#DCEEFF"/>
+    <rect x="120" y="90" width="18" height="14" rx="4" fill="#46D1B8"/>
+    <rect x="68" y="112" width="18" height="14" rx="4" fill="#DCEEFF"/>
+    <rect x="94" y="112" width="18" height="14" rx="4" fill="#DCEEFF"/>
+    <rect x="120" y="112" width="18" height="14" rx="4" fill="#DCEEFF"/>
+  </g>
   <circle cx="164" cy="134" r="34" fill="#FFFFFF" stroke="#1664D8" stroke-width="5"/>
   <circle cx="164" cy="134" r="24" fill="#F0F7FF"/>
   <path d="M164 118V134L176 141" stroke="#1664D8" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>

@@ -1,21 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140" fill="none">
-  <!-- Sparkle crosses -->
-  <g stroke="#FF6B6B" stroke-width="3.2" stroke-linecap="round">
-    <path d="M26 70V82M20 76H32"/>
-    <path d="M108 82V92M103 87H113"/>
+  <!-- 4-point sparkles matching Now card -->
+  <g fill="#FF6B6B">
+    <path d="M25 66L27.5 72.5L34 75L27.5 77.5L25 84L22.5 77.5L16 75L22.5 72.5Z"/>
+    <path d="M107 79L109 84L114 86L109 88L107 93L105 88L100 86L105 84Z"/>
   </g>
-  <g stroke="#339AF0" stroke-width="3.2" stroke-linecap="round">
-    <path d="M62 32V42M57 37H67"/>
-    <path d="M114 44V52M110 48H118"/>
+  <g fill="#339AF0">
+    <path d="M62 28L64 33L69 35L64 37L62 42L60 37L55 35L60 33Z"/>
+    <path d="M114 42L115.8 46.5L120.5 48.2L115.8 50L114 54.5L112.2 50L107.5 48.2L112.2 46.5Z"/>
   </g>
-  <g transform="rotate(-38 70 74)">
-    <!-- Bristles -->
-    <rect x="82" y="42" width="32" height="16" rx="4" fill="#FFFFFF" stroke="#0F295C" stroke-width="3"/>
-    <path d="M90 42V58M98 42V58M106 42V58" stroke="#74C0FC" stroke-width="2.5"/>
-    <!-- Toothpaste wave -->
-    <path d="M84 42C86 35 96 34 102 38C107 41 112 38 113 42" stroke="#4DABF7" stroke-width="4" stroke-linecap="round"/>
+  <g transform="rotate(-42 70 72)">
+    <!-- Bristle head -->
+    <rect x="84" y="42" width="32" height="16" rx="4" fill="#FFFFFF" stroke="#0F295C" stroke-width="3"/>
+    <path d="M92 42V58M100 42V58M108 42V58" stroke="#74C0FC" stroke-width="2.5"/>
     <!-- Handle -->
-    <rect x="20" y="58" width="98" height="16" rx="8" fill="#4DABF7" stroke="#0F295C" stroke-width="3.2"/>
-    <rect x="28" y="62" width="34" height="5" rx="2.5" fill="#A5D8FF"/>
+    <rect x="20" y="58" width="100" height="16" rx="8" fill="#3B9DF5" stroke="#0F295C" stroke-width="3.2"/>
+    <rect x="30" y="61" width="38" height="10" rx="5" fill="#82D4FF"/>
   </g>
 </svg>

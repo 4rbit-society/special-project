@@ -1,15 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 150" fill="none">
   <defs>
-    <linearGradient id="kpi-mint-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="pp-kpi-mint" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#E5FCF4"/>
       <stop offset="100%" stop-color="#C6F6E5"/>
     </linearGradient>
-    <clipPath id="kpi-mint-clip">
+    <clipPath id="pp-kpi-mint-clip">
       <rect width="320" height="150" rx="22"/>
     </clipPath>
   </defs>
-  <g clip-path="url(#kpi-mint-clip)">
-    <rect width="320" height="150" fill="url(#kpi-mint-bg)"/>
+  <g clip-path="url(#pp-kpi-mint-clip)">
+    <rect width="320" height="150" fill="url(#pp-kpi-mint)"/>
     <path d="M170 150C215 108 270 112 320 128V150H170Z" fill="#92EBD0" opacity="0.55"/>
     <path d="M0 126C70 100 140 128 205 150H0V126Z" fill="#A9F0DA" opacity="0.45"/>
   </g>

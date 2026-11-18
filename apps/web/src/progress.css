@@ -47,7 +47,7 @@
 .progress-ring strong{font-size:32px;line-height:1.3}.progress-ring span{font-size:13px;color:var(--staff-muted)}
 .progress-page .progress-today p{font-size:15px}
 .progress-today .progress-today-note{color:var(--staff-muted)}
-.progress-today>.staff-button{width:100%;margin-top:auto}
+.progress-today>.staff-button{width:100%;margin-top:auto;margin-bottom:24px}
 .progress-history-list{list-style:none;padding:0;margin:20px 0 0;display:grid}
 .progress-history-list li{display:flex;align-items:center;gap:14px;padding:16px 0;border-top:1px solid var(--staff-border)}
 .progress-history-icon{width:44px;height:44px;border-radius:12px;background:var(--staff-canvas);display:grid;place-items:center;flex:none;font-size:26px}

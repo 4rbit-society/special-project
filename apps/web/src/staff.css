@@ -61,14 +61,26 @@
 .staff-dashboard-action .staff-button, .staff-add-child { min-width: 176px; }
 .staff-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
 .staff-stat-card {
-  display: flex; align-items: center; gap: 16px; min-width: 0; min-height: 102px;
-  border: 1px solid var(--staff-border); border-radius: 12px; background: #fff;
-  padding: 16px; box-shadow: 0 2px 6px -1px #1f29330f, 0 1px 2px #1f29330a;
+  display: flex; align-items: center; gap: 16px; min-width: 0; min-height: 128px;
+  border: 1px solid var(--staff-border); border-radius: 22px; background-color: #fff;
+  padding: 18px; box-shadow: 0 2px 6px -1px #1f29330f, 0 1px 2px #1f29330a;
 }
-.staff-stat-icon { flex: 0 0 48px; width: 48px; height: 48px; display: grid; place-items: center; }
-.staff-stat-icon img { display: block; max-width: none; }
+.staff-stat-card:nth-child(1) {
+  background-image: url('/araw/backgrounds/kpi-wave-blue.svg');
+  background-position: right bottom; background-size: cover; background-repeat: no-repeat;
+}
+.staff-stat-card:nth-child(2) {
+  background-image: url('/araw/backgrounds/kpi-wave-mint.svg');
+  background-position: right bottom; background-size: cover; background-repeat: no-repeat;
+}
+.staff-stat-card:nth-child(3) {
+  background-image: url('/araw/backgrounds/kpi-wave-purple.svg');
+  background-position: right bottom; background-size: cover; background-repeat: no-repeat;
+}
+.staff-stat-icon { flex: 0 0 50px; width: 50px; height: 50px; display: grid; place-items: center; }
+.staff-stat-icon img { width: 42px; height: 42px; object-fit: contain; display: block; }
 .staff-stat-card div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.staff-stat-card strong { font-size: 32px; line-height: 40px; font-weight: 800; white-space: nowrap; }
+.staff-stat-card strong { font-size: 32px; line-height: 40px; font-weight: 800; }
 .staff-stat-card div span { color: var(--staff-muted); font-size: 16px; line-height: 24px; }
 .staff-child-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
 .staff-child-card { display: flex; flex-direction: column; gap: 16px; min-width: 0; padding: 24px; border: 1px solid var(--staff-border); border-radius: 12px; background: #fff; }

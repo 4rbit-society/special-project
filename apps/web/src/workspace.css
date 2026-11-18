@@ -37,9 +37,9 @@
 .staff-dashboard-action .staff-button::before { content:''; width:24px; height:24px; margin-right:10px; background:url('/araw/icons/icon-plus-add.svg') center / contain no-repeat; filter:brightness(0) invert(1); }
 .staff-stats { gap:18px; }
 .staff-stat-card { min-height:128px; padding:18px; border-radius:22px; }
-.staff-stat-card:nth-child(1) { background:#fff url('/araw/backgrounds/kpi-wave-blue.svg') right bottom / 75% auto no-repeat; }
-.staff-stat-card:nth-child(2) { background:#fff url('/araw/backgrounds/kpi-wave-mint.svg') right bottom / 75% auto no-repeat; }
-.staff-stat-card:nth-child(3) { background:#fff url('/araw/backgrounds/kpi-wave-purple.svg') right bottom / 75% auto no-repeat; }
+.staff-stat-card:nth-child(1) { background:#fff url('/araw/backgrounds/kpi-wave-blue.svg') right bottom / cover no-repeat; }
+.staff-stat-card:nth-child(2) { background:#fff url('/araw/backgrounds/kpi-wave-mint.svg') right bottom / cover no-repeat; }
+.staff-stat-card:nth-child(3) { background:#fff url('/araw/backgrounds/kpi-wave-purple.svg') right bottom / cover no-repeat; }
 .staff-stat-icon { width:50px; flex-basis:50px; }
 .staff-stat-icon img { width:42px; height:42px; object-fit:contain; }
 .staff-dashboard-bottom { display:grid; grid-template-columns:minmax(310px,.86fr) minmax(0,2fr); align-items:stretch; gap:20px; }

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140" fill="none">
+  <!-- Steam -->
+  <path d="M52 46C49 40 55 34 52 28" stroke="#FFA94D" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M70 42C67 36 73 30 70 24" stroke="#FFA94D" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M88 46C85 40 91 34 88 28" stroke="#FFA94D" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Food inside -->
+  <ellipse cx="70" cy="68" rx="40" ry="13" fill="#FFE066" stroke="#0F295C" stroke-width="3"/>
+  <!-- Bowl body -->
+  <path d="M30 68C30 94 46 112 70 112C94 112 110 94 110 68C98 76 42 76 30 68Z" fill="#4DABF7" stroke="#0F295C" stroke-width="3.2" stroke-linejoin="round"/>
+  <!-- Base -->
+  <rect x="52" y="110" width="36" height="8" rx="4" fill="#228BE6" stroke="#0F295C" stroke-width="2.8"/>
+</svg>

@@ -55,6 +55,41 @@ package.json
 tsconfig.base.json
 ```
 
+## Run everything in Docker
+
+Start Docker Desktop with Linux containers. Copy the root `.env.example` to `.env`
+and replace `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, and `JWT_SECRET` with distinct
+random values (use at least 32 characters for the JWT secret). This Compose
+configuration is independent of `apps/api/.env`.
+
+```sh
+docker compose up -d --build --wait
+```
+
+Open http://localhost:5173 and register an account. The frontend runs in Nginx,
+the backend runs in Node.js, and MySQL runs in its own container. The backend
+applies the schema and runs the existing idempotent seed before listening.
+The seeded demo caregiver has no login password; use your registered account.
+
+The API is available at http://localhost:3001/api/health and through the frontend
+at http://localhost:5173/api/health. MySQL is available at `127.0.0.1:3306` using
+the root `.env` database name, username, and password. All published ports bind
+to the local machine. Change `WEB_PORT`, `API_PORT`, or `DB_PUBLISHED_PORT` in
+the root `.env` if a port is already in use.
+
+```sh
+docker compose ps                 # View all three services and their health
+docker compose logs -f            # Follow service logs
+docker compose down               # Stop containers; keep database data
+docker compose up -d --build --wait # Rebuild and restart after code changes
+```
+
+MySQL data persists in the `araw_mysql_data` Docker volume. Keep the root `.env`
+for subsequent starts: changing its MySQL credentials does not change users in
+an existing database volume. `docker compose down -v` deletes that database.
+Source files and secrets are excluded from the frontend image; application
+`.env` files are excluded from the build context.
+
 ## Run locally
 
 Start MySQL and create the `special_project` database. Copy `apps/api/.env.example` to
@@ -157,17 +192,7 @@ Set `E2E_BROWSER_CHANNEL=chrome` to use an installed Chrome instead. CI installs
 
 ### Containers (MySQL + API + web)
 
-The repository includes `Dockerfile` (API), `Dockerfile.web` (static web through nginx), `docker-compose.yml`, and `deploy/nginx.conf`. The compose stack starts MySQL 8, applies the schema and seed data through a one-shot `db-init` service, then starts the API and web container.
-
-```sh
-cp deploy/.env.example .env
-# Edit .env: set MYSQL_ROOT_PASSWORD, JWT_SECRET (16+ chars) and FRONTEND_ORIGIN
-docker compose up --build
-```
-
-Open http://localhost:8080. The web container proxies `/api` to the API container; the API is also exposed at http://localhost:3001. `FRONTEND_ORIGIN` must match the browser origin (use `http://localhost:8080`, not `127.0.0.1`, unless you change it). For HTTPS, terminate TLS at a reverse proxy in front of the web container and forward `/` to port 80; keep the API on the private compose network.
-
-To reset the database, stop the stack and remove the volume with `docker compose down -v`. Re-running `docker compose up` recreates the schema and seed data.
+See [Run everything in Docker](#run-everything-in-docker) above for the supported Compose setup.
 
 ### Manual deployment
 

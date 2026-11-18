@@ -66,7 +66,7 @@ interface IdRow extends RowDataPacket {
 async function findId(
   connection: PoolConnection,
   sql: string,
-  values: readonly unknown[],
+  values: readonly (string | number)[],
 ): Promise<number> {
   const [rows] = await connection.execute<IdRow[]>(sql, [...values]);
   const row = rows[0];

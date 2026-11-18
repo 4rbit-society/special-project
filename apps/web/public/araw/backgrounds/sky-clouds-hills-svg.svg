@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" fill="none">
+  <defs>
+    <linearGradient id="sky-bg-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#BEE6FD"/>
+      <stop offset="55%" stop-color="#E1F4FE"/>
+      <stop offset="100%" stop-color="#B9F1E8"/>
+    </linearGradient>
+    <linearGradient id="hill-mint-1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9BEED8"/>
+      <stop offset="100%" stop-color="#4FD5C6"/>
+    </linearGradient>
+    <linearGradient id="hill-mint-2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5EDCC9"/>
+      <stop offset="100%" stop-color="#2FC4BE"/>
+    </linearGradient>
+    <linearGradient id="hill-mint-3" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#76E7D3"/>
+      <stop offset="100%" stop-color="#3AC9BE"/>
+    </linearGradient>
+  </defs>
+  <rect width="1440" height="900" fill="url(#sky-bg-grad)"/>
+  <!-- Soft top-right teal accent blob -->
+  <circle cx="1360" cy="40" r="220" fill="#7DE5DC" opacity="0.45"/>
+  <!-- Background cloud layer -->
+  <path d="M-40 240C40 160 180 150 260 210C340 120 510 110 610 190C710 100 900 100 1000 185C1100 120 1280 125 1380 205C1440 180 1480 200 1480 240V900H-40V240Z" fill="#FFFFFF" opacity="0.52"/>
+  <path d="M-20 420C80 350 210 360 280 430C380 340 530 350 620 425C730 350 880 360 970 435C1080 360 1250 355 1360 420C1410 400 1460 410 1460 450V900H-20V420Z" fill="#FFFFFF" opacity="0.42"/>
+  <!-- Small sky clouds -->
+  <path d="M930 85C930 70 944 58 960 60C968 46 988 42 1002 52C1018 46 1036 58 1038 74C1050 76 1058 86 1058 96H930V85Z" fill="#FFFFFF" opacity="0.85"/>
+  <path d="M180 125C180 112 192 102 206 104C214 92 232 90 244 98C258 94 274 104 276 118C286 120 292 128 292 136H180V125Z" fill="#FFFFFF" opacity="0.78"/>
+  <!-- Floating stars -->
+  <g fill="#FFD43B">
+    <path d="M1070 86L1077 100L1092 102L1081 112L1084 127L1070 120L1056 127L1059 112L1048 102L1063 100Z"/>
+    <path d="M1392 178L1397 188L1408 190L1400 198L1402 209L1392 204L1382 209L1384 198L1376 190L1387 188Z"/>
+    <path d="M1190 770L1196 781L1208 783L1199 792L1201 804L1190 798L1179 804L1181 792L1172 783L1184 781Z"/>
+    <path d="M1345 812L1350 821L1360 823L1353 830L1355 840L1345 835L1335 840L1337 830L1330 823L1340 821Z"/>
+  </g>
+  <!-- Mint rolling hills -->
+  <path d="M-40 760C160 660 360 680 540 760C720 670 930 660 1120 755C1260 690 1380 690 1480 740V900H-40V760Z" fill="url(#hill-mint-1)"/>
+  <path d="M-40 820C140 745 310 765 470 830C660 745 880 745 1060 830C1220 760 1370 765 1480 815V900H-40V820Z" fill="url(#hill-mint-2)"/>
+  <path d="M220 900C340 810 520 805 660 890C800 815 980 810 1120 900H220Z" fill="url(#hill-mint-3)" opacity="0.8"/>
+  <!-- Foreground bottom clouds -->
+  <path d="M-20 865C30 825 110 830 145 865C185 835 250 845 275 880H-20V865Z" fill="#FFFFFF" opacity="0.9"/>
+  <path d="M1080 875C1125 835 1205 840 1245 875C1285 835 1370 830 1460 875V900H1080V875Z" fill="#FFFFFF" opacity="0.9"/>
+</svg>

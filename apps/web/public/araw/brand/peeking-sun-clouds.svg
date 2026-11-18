@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" fill="none">
+  <defs>
+    <radialGradient id="peeking-sun-grad" cx="45%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FFF29C"/>
+      <stop offset="55%" stop-color="#FFD43B"/>
+      <stop offset="100%" stop-color="#F7A000"/>
+    </radialGradient>
+    <linearGradient id="peeking-cloud-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E7F4FE"/>
+    </linearGradient>
+  </defs>
+  <!-- Spark bursts -->
+  <g fill="#FFD43B">
+    <rect x="242" y="42" width="32" height="10" rx="5" transform="rotate(-38 242 42)"/>
+    <rect x="255" y="64" width="36" height="10" rx="5" transform="rotate(-14 255 64)"/>
+    <rect x="220" y="24" width="26" height="9" rx="4.5" transform="rotate(-62 220 24)"/>
+  </g>
+  <!-- Sun rays -->
+  <g fill="#FFC933">
+    <path d="M142 26C146 14 158 14 162 26L170 48H134L142 26Z"/>
+    <path d="M90 42C90 30 101 26 109 35L125 53L95 66L90 42Z"/>
+    <path d="M194 35C202 26 213 30 213 42L208 66L178 53L194 35Z"/>
+    <path d="M54 84C48 73 56 63 68 67L92 77L74 102L54 84Z"/>
+    <path d="M235 67C247 63 255 73 249 84L229 102L211 77L235 67Z"/>
+    <path d="M40 135C30 128 33 115 45 114L70 112L66 144L40 135Z"/>
+    <path d="M258 114C270 115 273 128 263 135L237 144L233 112L258 114Z"/>
+  </g>
+  <!-- Sun body -->
+  <circle cx="152" cy="126" r="82" fill="url(#peeking-sun-grad)" stroke="#F59F00" stroke-width="3"/>
+  <ellipse cx="118" cy="80" rx="22" ry="11" transform="rotate(-22 118 80)" fill="#FFFBE6" opacity="0.65"/>
+  <!-- Happy closed eyes -->
+  <path d="M108 116C112 104 128 104 132 116" stroke="#1E293B" stroke-width="6.5" stroke-linecap="round"/>
+  <path d="M172 116C176 104 192 104 196 116" stroke="#1E293B" stroke-width="6.5" stroke-linecap="round"/>
+  <!-- Cheeks -->
+  <ellipse cx="99" cy="133" rx="13" ry="8" fill="#FF7B89" opacity="0.72"/>
+  <ellipse cx="205" cy="133" rx="13" ry="8" fill="#FF7B89" opacity="0.72"/>
+  <!-- Smile -->
+  <path d="M138 134C144 146 160 146 166 134" stroke="#1E293B" stroke-width="6" stroke-linecap="round"/>
+  <!-- Layered fluffy white clouds -->
+  <path d="M12 224C12 192 38 168 68 172C78 148 108 140 130 156C152 142 184 150 194 176C218 164 248 176 254 202C278 198 302 210 308 228H12V224Z" fill="#D5ECFC"/>
+  <path d="M6 232C6 202 32 180 62 184C74 158 106 152 128 168C148 156 180 164 190 186C214 174 246 186 252 210C276 204 304 216 314 232H6Z" fill="url(#peeking-cloud-grad)"/>
+</svg>

@@ -42,7 +42,7 @@
 .staff-stat-card:nth-child(3) { background:#fff url('/araw/backgrounds/kpi-wave-purple.svg') right bottom / cover no-repeat; }
 .staff-stat-icon { width:50px; flex-basis:50px; }
 .staff-stat-icon img { width:42px; height:42px; object-fit:contain; }
-.staff-dashboard-bottom { display:grid; grid-template-columns:minmax(310px,.86fr) minmax(0,2fr); align-items:stretch; gap:20px; }
+.staff-dashboard-bottom { display:grid; grid-template-columns:minmax(310px,.86fr) minmax(0,2fr); align-items:start; gap:20px; }
 .staff-dashboard-children { padding:22px 24px; }
 .staff-dashboard-children>h2 { margin:0 0 18px; }
 .staff-dashboard-children>h2::before { content:''; display:inline-block; width:26px; height:26px; margin-right:10px; vertical-align:-4px; background:url('/araw/icons/icon-child-profiles.svg') center / contain no-repeat; }
@@ -55,8 +55,7 @@
 .staff-dashboard .staff-child-card .staff-button.primary { background:var(--araw-grad-teal); border-color:var(--araw-teal-cta); }
 .staff-last-seven { padding:22px 24px; }
 .staff-last-seven-header { align-items:center; }
-.staff-last-seven-header h2::before { content:''; display:inline-block; width:26px; height:26px; margin-right:10px; vertical-align:-5px; background:url('/araw/icons/icon-schedules-calendar.svg') center / contain no-repeat; }
-.staff-last-seven-header .staff-field { width:240px; }
+.staff-last-seven-header h2::before { content:''; display:inline-block; width:32px; height:32px; margin-right:12px; vertical-align:-7px; background:url('/araw/icons/icon-schedules-calendar.svg') center / contain no-repeat; }
 .staff-week-grid-compact { gap:8px; }
 .staff-week-grid-compact .staff-week-day { min-height:144px; padding:12px 7px; border:1px solid #d7e9fb; border-radius:16px; background:#f5faff; text-align:center; }
 .staff-week-grid-compact .staff-week-date { font-size:13px; }
@@ -179,8 +178,7 @@
   .staff-dashboard .staff-child-card .staff-avatar { display:flex; }
   .staff-dashboard .staff-child-card .staff-avatar,.staff-dashboard .staff-child-card .staff-avatar img { width:70px; height:70px; }
   .staff-dashboard .staff-last-seven { order:0; }
-  .staff-last-seven>.staff-button { display:inline-flex; width:100%; }
-  .staff-last-seven-header .staff-field { width:100%; }
+  .staff-last-seven-header { align-items:stretch; }
   .staff-week-grid-compact .staff-week-day { min-height:0; padding:9px 12px; text-align:left; }
   .staff-profiles .staff-add-child { width:100%; }
   .staff-profile-identity>.staff-avatar,.staff-profile-identity .staff-avatar-kit { width:64px; height:64px; }

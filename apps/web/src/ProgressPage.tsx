@@ -54,10 +54,10 @@ export function ProgressPage({ data, selectedChildId, actions }: SharedPageProps
 
   return <div className="staff-page staff-progress-page progress-page">
     <header className="progress-heading"><div><div className="progress-title-row"><h1>Progress</h1>
-      <label className="progress-child-picker">
-        <span className="progress-child-picker-avatar" aria-hidden="true">{child.avatar === '🐱' ? <img src="/araw/avatars/avatar-cat-svg.svg" alt="" /> : child.avatar}</span>
-        <span className="progress-child-picker-name">{child.name}</span>
-        <svg className="progress-picker-chevron" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5 6 6.5l5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      <label className="staff-picker">
+        <span className="staff-picker-avatar" aria-hidden="true">{child.avatar === '🐱' ? <img src="/araw/avatars/avatar-cat-svg.svg" alt="" /> : child.avatar}</span>
+        <span>{child.name}</span>
+        <svg className="staff-picker-chevron" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5 6 6.5l5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         <select aria-label="Child" value={child.id} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
       </label>
     </div><p>Small steps, one day at a time.</p></div>
@@ -101,10 +101,10 @@ export function ProgressPage({ data, selectedChildId, actions }: SharedPageProps
     <section className="progress-activities staff-panel" aria-labelledby="progress-activities-title">
       <div className="progress-section-heading">
         <div><div className="progress-title-row"><h2 id="progress-activities-title">Activity patterns</h2>
-          <label className="progress-period-picker">
+          <label className="staff-picker progress-period-picker">
             <svg className="progress-period-picker-icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.75" y="3.25" width="12.5" height="11" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.5" /><path d="M1.75 6.75h12.5M5.25 1.75v3M10.75 1.75v3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
             <span>{range === '7d' ? 'Last 7 days' : 'Last 30 days'}</span>
-            <svg className="progress-picker-chevron" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5 6 6.5l5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            <svg className="staff-picker-chevron" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5 6 6.5l5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
             <select aria-label="Period" value={range} onChange={(event) => setRange(event.target.value as ProgressRange)}><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></select>
           </label>
         </div><p>Most and least completed over the selected period.</p></div>

@@ -22,6 +22,12 @@ function Avatar({ avatar, variant = 'profile' }: { avatar: string; variant?: 'pr
   return <span className="staff-avatar staff-avatar-profile"><picture><source media="(max-width: 700px)" srcSet={image.mobile} /><img src={image.desktop} alt="" /></picture></span>;
 }
 
+function pickerFace(avatar: string) {
+  if (avatar === '🐱') return <img src="/araw/avatars/avatar-cat-svg.svg" alt="" />;
+  const asset = avatarAssets[avatar];
+  return asset ? <img src={asset.dashboard} alt="" /> : avatar;
+}
+
 function dayDate(iso: string, options: Intl.DateTimeFormatOptions): string {
   return new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', ...options }).format(new Date(`${iso}T12:00:00Z`));
 }
@@ -67,6 +73,7 @@ function WeekView({ data, childId, today, compact = false }: Pick<Props, 'data' 
 
 function Dashboard({ data, selectedChildId, today, actions, onAddChild }: Props & { onAddChild: () => void }) {
   const selectedId = data.children.some((child) => child.id === selectedChildId) ? selectedChildId : (data.children[0]?.id ?? 0);
+  const selectedChild = data.children.find((child) => child.id === selectedId) ?? data.children[0]!;
   if (!data.children.length) return <div className="staff-page staff-first-run"><h1>Welcome to Araw</h1><p className="staff-lead">Set up your first child's day in three steps. It takes about ten minutes.</p><div className="staff-panel staff-steps">
     <div className="staff-step"><span className="staff-step-badge active">1</span><div><h2>Add a child</h2><p>Their name, age and a picture. No medical records.</p><button className="staff-button primary" onClick={onAddChild}>Add your first child</button></div></div>
     <div className="staff-step"><span className="staff-step-badge">2</span><div><h2>Build their day</h2><p>Pick activities from the library and put them in order.</p></div></div>
@@ -92,7 +99,20 @@ function Dashboard({ data, selectedChildId, today, actions, onAddChild }: Props 
         <button className="staff-button secondary" onClick={() => { actions.selectChild(child.id); actions.navigate('schedules'); }}>{schedule ? 'View schedule' : 'Create schedule'}</button>
       </article>;
     })}</div></section>
-    <section className="staff-panel staff-last-seven"><div className="staff-last-seven-header"><h2>Last 7 days</h2><label className="staff-field">Child<select value={selectedId} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((child) => <option key={child.id} value={child.id}>{child.name}</option>)}</select></label></div><WeekView data={data} childId={selectedId} today={today} compact /><button className="staff-button secondary" onClick={() => actions.navigate('progress')}>View progress</button></section></div>
+    <section className="staff-panel staff-last-seven">
+      <div className="staff-last-seven-header"><h2>Last 7 days</h2>
+        <div className="staff-last-seven-actions">
+          <label className="staff-picker">
+            <span className="staff-picker-avatar" aria-hidden="true">{pickerFace(selectedChild.avatar)}</span>
+            <span>{selectedChild.name}</span>
+            <svg className="staff-picker-chevron" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5 6 6.5l5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            <select aria-label="Child" value={selectedId} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((child) => <option key={child.id} value={child.id}>{child.name}</option>)}</select>
+          </label>
+          <button className="staff-button secondary" onClick={() => actions.navigate('progress')}>View progress</button>
+        </div>
+      </div>
+      <WeekView data={data} childId={selectedId} today={today} compact />
+    </section></div>
   </div>;
 }
 

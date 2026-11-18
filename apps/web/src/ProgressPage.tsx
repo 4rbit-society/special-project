@@ -53,8 +53,9 @@ export function ProgressPage({ data, selectedChildId, actions }: SharedPageProps
   </li>;
 
   return <div className="staff-page staff-progress-page progress-page">
-    <header className="progress-heading"><div><h1>Progress</h1><p>Small steps, one day at a time.</p></div>
+    <header className="progress-heading"><div><div className="progress-heading-title"><h1>Progress</h1>
       <label className="staff-field progress-child-select">Child<select value={child.id} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+    </div><p>Small steps, one day at a time.</p></div>
     </header>
 
     <div className="progress-week-heading"><div className="progress-child-identity"><span className="progress-avatar" aria-hidden="true">{child.avatar === '🐱' ? <img src="/araw/avatars/avatar-cat-svg.svg" alt="" /> : child.avatar}</span><div><h2>{child.name}'s week</h2><p>{dateRangeLabel}</p></div></div><span className="progress-period">Last 7 days</span></div>

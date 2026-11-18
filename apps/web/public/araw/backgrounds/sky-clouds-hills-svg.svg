@@ -1,44 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" fill="none">
   <defs>
-    <linearGradient id="sky-bg-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#BEE6FD"/>
-      <stop offset="55%" stop-color="#E1F4FE"/>
-      <stop offset="100%" stop-color="#B9F1E8"/>
+    <linearGradient id="pp-sky-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#BEE7FE"/>
+      <stop offset="52%" stop-color="#E2F4FE"/>
+      <stop offset="100%" stop-color="#BDF2EA"/>
     </linearGradient>
-    <linearGradient id="hill-mint-1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#9BEED8"/>
-      <stop offset="100%" stop-color="#4FD5C6"/>
+    <linearGradient id="pp-cloud-billow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#E6F5FF" stop-opacity="0.58"/>
     </linearGradient>
-    <linearGradient id="hill-mint-2" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#5EDCC9"/>
-      <stop offset="100%" stop-color="#2FC4BE"/>
+    <linearGradient id="pp-hill-1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9BF2DF"/>
+      <stop offset="100%" stop-color="#53DAC8"/>
     </linearGradient>
-    <linearGradient id="hill-mint-3" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#76E7D3"/>
-      <stop offset="100%" stop-color="#3AC9BE"/>
+    <linearGradient id="pp-hill-2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5DE1CE"/>
+      <stop offset="100%" stop-color="#2FC6C0"/>
+    </linearGradient>
+    <linearGradient id="pp-hill-3" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#87EEDB"/>
+      <stop offset="100%" stop-color="#3FD2C4"/>
     </linearGradient>
   </defs>
-  <rect width="1440" height="900" fill="url(#sky-bg-grad)"/>
-  <!-- Soft top-right teal accent blob -->
-  <circle cx="1360" cy="40" r="220" fill="#7DE5DC" opacity="0.45"/>
-  <!-- Background cloud layer -->
-  <path d="M-40 240C40 160 180 150 260 210C340 120 510 110 610 190C710 100 900 100 1000 185C1100 120 1280 125 1380 205C1440 180 1480 200 1480 240V900H-40V240Z" fill="#FFFFFF" opacity="0.52"/>
-  <path d="M-20 420C80 350 210 360 280 430C380 340 530 350 620 425C730 350 880 360 970 435C1080 360 1250 355 1360 420C1410 400 1460 410 1460 450V900H-20V420Z" fill="#FFFFFF" opacity="0.42"/>
-  <!-- Small sky clouds -->
-  <path d="M930 85C930 70 944 58 960 60C968 46 988 42 1002 52C1018 46 1036 58 1038 74C1050 76 1058 86 1058 96H930V85Z" fill="#FFFFFF" opacity="0.85"/>
-  <path d="M180 125C180 112 192 102 206 104C214 92 232 90 244 98C258 94 274 104 276 118C286 120 292 128 292 136H180V125Z" fill="#FFFFFF" opacity="0.78"/>
-  <!-- Floating stars -->
+  <rect width="1440" height="900" fill="url(#pp-sky-grad)"/>
+  <path d="M1110 0H1440V235C1360 225 1290 190 1245 140C1195 110 1135 65 1110 0Z" fill="#7DE6DE" opacity="0.58"/>
+  <path d="M-40 225C45 120 205 110 295 190C385 95 565 95 675 180C780 95 965 100 1070 185C1175 115 1350 120 1475 215V900H-40V225Z" fill="url(#pp-cloud-billow)"/>
+  <path d="M-20 430C85 350 220 355 305 425C410 335 560 345 655 425C765 345 920 355 1015 435C1130 355 1295 355 1465 435V900H-20V430Z" fill="#FFFFFF" opacity="0.45"/>
+  <path d="M920 84C920 68 935 55 952 57C962 42 984 38 999 49C1016 42 1036 55 1038 72C1051 74 1060 85 1060 96H920V84Z" fill="#FFFFFF" opacity="0.88"/>
   <g fill="#FFD43B">
-    <path d="M1070 86L1077 100L1092 102L1081 112L1084 127L1070 120L1056 127L1059 112L1048 102L1063 100Z"/>
+    <path d="M1070 86C1071 84 1074 84 1075 86L1081 98L1094 100C1096 100 1097 103 1095 105L1085 114L1088 127C1088 129 1086 131 1084 130L1072 124L1060 130C1058 131 1056 129 1056 127L1059 114L1049 105C1047 103 1048 100 1050 100L1063 98Z"/>
     <path d="M1392 178L1397 188L1408 190L1400 198L1402 209L1392 204L1382 209L1384 198L1376 190L1387 188Z"/>
-    <path d="M1190 770L1196 781L1208 783L1199 792L1201 804L1190 798L1179 804L1181 792L1172 783L1184 781Z"/>
-    <path d="M1345 812L1350 821L1360 823L1353 830L1355 840L1345 835L1335 840L1337 830L1330 823L1340 821Z"/>
   </g>
-  <!-- Mint rolling hills -->
-  <path d="M-40 760C160 660 360 680 540 760C720 670 930 660 1120 755C1260 690 1380 690 1480 740V900H-40V760Z" fill="url(#hill-mint-1)"/>
-  <path d="M-40 820C140 745 310 765 470 830C660 745 880 745 1060 830C1220 760 1370 765 1480 815V900H-40V820Z" fill="url(#hill-mint-2)"/>
-  <path d="M220 900C340 810 520 805 660 890C800 815 980 810 1120 900H220Z" fill="url(#hill-mint-3)" opacity="0.8"/>
-  <!-- Foreground bottom clouds -->
-  <path d="M-20 865C30 825 110 830 145 865C185 835 250 845 275 880H-20V865Z" fill="#FFFFFF" opacity="0.9"/>
-  <path d="M1080 875C1125 835 1205 840 1245 875C1285 835 1370 830 1460 875V900H1080V875Z" fill="#FFFFFF" opacity="0.9"/>
+  <path d="M-40 755C165 655 375 675 565 760C745 665 955 655 1145 755C1275 690 1390 695 1480 740V900H-40V755Z" fill="url(#pp-hill-1)"/>
+  <path d="M-40 825C145 740 325 765 490 835C680 740 895 745 1075 835C1235 760 1380 765 1480 818V900H-40V825Z" fill="url(#pp-hill-2)"/>
+  <path d="M210 900C340 805 525 805 665 895C805 810 990 810 1135 900H210Z" fill="url(#pp-hill-3)" opacity="0.82"/>
+  <path d="M-20 865C32 820 116 825 154 865C196 832 260 842 288 882H-20V865Z" fill="#FFFFFF" opacity="0.92"/>
+  <path d="M1070 875C1120 830 1205 835 1245 875C1290 832 1375 828 1465 875V900H1070V875Z" fill="#FFFFFF" opacity="0.92"/>
 </svg>

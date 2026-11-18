@@ -211,23 +211,22 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
   }
 
   return <div className="schedule-page">
-    <header className="schedule-page-heading">
-      <div className="schedule-title-row">
-        <div><h1>Schedules</h1><p>{child.name} · {dateLabel(date, true)}</p></div>
-        <div className="schedule-menu" ref={menuRef}>
-          <button type="button" className="schedule-menu-trigger" aria-haspopup="menu" aria-expanded={menuOpen} aria-label="Schedule options" onClick={() => setMenuOpen((open) => !open)}>
-            <svg viewBox="0 0 4 18" aria-hidden="true"><circle cx="2" cy="2" r="1.7" /><circle cx="2" cy="9" r="1.7" /><circle cx="2" cy="16" r="1.7" /></svg>
-          </button>
-          {menuOpen && <div className="schedule-menu-popover" role="menu">
-            <button type="button" role="menuitem" className="schedule-menu-item" onClick={openChildModal}><span>Child</span><strong>{child.name}</strong></button>
-            <button type="button" role="menuitem" className="schedule-menu-item" onClick={openDateModal}><span>Date</span><strong>{dateLabel(date)}</strong></button>
-            <span className="schedule-menu-sep" role="separator" />
-            <button type="button" role="menuitem" className="schedule-menu-item" onClick={openCopyModal}><span>Copy from date</span></button>
-            <button type="button" role="menuitem" className="schedule-menu-item" onClick={openPreview}><span>Preview</span></button>
-            <button type="button" role="menuitem" className="schedule-menu-item" onClick={openLibrary}><span>Activity library</span></button>
-          </div>}
-        </div>
+    <header className="schedule-page-heading" ref={menuRef}>
+      <div className="schedule-title-line">
+        <h1>Schedules</h1>
+        <button type="button" className="schedule-menu-trigger" aria-haspopup="menu" aria-expanded={menuOpen} aria-label="Schedule options" onClick={() => setMenuOpen((open) => !open)}>
+          <svg viewBox="0 0 4 18" aria-hidden="true"><circle cx="2" cy="2" r="1.7" /><circle cx="2" cy="9" r="1.7" /><circle cx="2" cy="16" r="1.7" /></svg>
+        </button>
       </div>
+      <p>{child.name} · {dateLabel(date, true)}</p>
+      {menuOpen && <div className="schedule-menu-popover" role="menu">
+        <button type="button" role="menuitem" className="schedule-menu-item" onClick={openChildModal}><span>Child</span><strong>{child.name}</strong></button>
+        <button type="button" role="menuitem" className="schedule-menu-item" onClick={openDateModal}><span>Date</span><strong>{dateLabel(date)}</strong></button>
+        <span className="schedule-menu-sep" role="separator" />
+        <button type="button" role="menuitem" className="schedule-menu-item" onClick={openCopyModal}><span>Copy from date</span></button>
+        <button type="button" role="menuitem" className="schedule-menu-item" onClick={openPreview}><span>Preview</span></button>
+        <button type="button" role="menuitem" className="schedule-menu-item" onClick={openLibrary}><span>Activity library</span></button>
+      </div>}
     </header>
     {notice && <div className={`schedule-notice ${notice === 'Schedule saved' ? 'success' : ''}`} role="status">{notice}</div>}
     <p className="schedule-count">{draft.length} {draft.length === 1 ? 'activity' : 'activities'}</p>
@@ -240,7 +239,7 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
         <div className="schedule-tasks">{draft.length ? draft.map((task, index) => <article className={`schedule-task ${selectedTaskId === task.id ? 'selected' : ''}`} key={task.id} draggable onDragStart={(event) => event.dataTransfer.setData('text/plain', String(index))} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const value = event.dataTransfer.getData('text/plain'); if (!/^\d+$/.test(value)) return; const from = Number(value); if (from < 0 || from >= draft.length) return; setDraft((items) => { const next = [...items]; const [item] = next.splice(from, 1); next.splice(index, 0, item!); return next; }); }}>
           <div className="schedule-task-main"><strong className="schedule-task-number">{index + 1}</strong><ActivityIcon src={task.icon} /><div className="schedule-task-description"><strong>{task.name}</strong><span className={task.startTime ? '' : 'no-time'}>{task.startTime ? `${task.startTime}${task.duration ? ` · ${task.duration} min` : ''}` : 'Time not set'}</span></div><CategoryChip category={task.category} /></div>
           <div className="schedule-task-actions"><span className="schedule-grip" aria-hidden="true">⠿</span><button className="schedule-arrow" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move ${task.name} up`}>↑</button><button className="schedule-arrow" onClick={() => move(index, 1)} disabled={index === draft.length - 1} aria-label={`Move ${task.name} down`}>↓</button><button className="button button-outline schedule-mobile-move" onClick={() => move(index, -1)} disabled={index === 0}>Move up</button><button className="button button-outline schedule-mobile-move" onClick={() => move(index, 1)} disabled={index === draft.length - 1}>Move down</button><button className="button button-outline" onClick={() => { const tasks = withDetails(); if (!tasks) return; setDraft(tasks); setSelectedTaskId(task.id); setMobileEditing(true); }}>Edit</button><button className="button button-outline schedule-row-remove" onClick={() => remove(task.id)}>Remove</button></div>
-        </article>) : <div className="schedule-empty"><p>No activities added yet.</p><button className="button button-primary" onClick={openLibrary}>Add activity</button></div>}</div>
+        </article>) : <div className="schedule-empty"><p>No activities added yet.</p></div>}</div>
       </section>
       <aside className={`schedule-panel schedule-details ${mobileEditing ? 'mobile-visible' : ''}`}>
         {selected ? <><h2>{selected.name}</h2><ActivityIcon src={selected.icon} /><p className="schedule-detail-category">{selected.category}</p><label>Start time (optional)<input type="time" value={time} onChange={(event) => setTime(event.target.value)} /></label><label>Duration (minutes)<input type="number" min="1" max="1440" value={duration} onChange={(event) => setDuration(event.target.value)} placeholder="Optional" /><small>Optional. Enter a positive number.</small></label><button className="button button-primary" onClick={applyDetails}>Apply to draft</button><button className="button button-outline" onClick={() => { setSelectedTaskId(null); setMobileEditing(false); }}>Cancel edit</button><button className="button button-danger" onClick={() => remove(selected.id)}>Remove from schedule</button></> : <><h2>Activity details</h2><p className="schedule-helper">Select an activity to edit its time or duration.</p></>}

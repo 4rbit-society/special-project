@@ -1,6 +1,6 @@
 // Mock stand-in for Group 1 persistence, used by child, schedule, task, and progress routes.
 // In-memory only; replace with parameterized SQL while keeping these signatures.
-import type { Activity, ActivityProgress, Child, ChildProfileInput, ChildProfileUpdate } from '@starter/shared';
+import type { Activity, ActivityProgress, Child, ChildProfileInput, ChildProfileUpdate, CreateActivityInput } from '@starter/shared';
 import { PREDEFINED_ICONS } from '@starter/shared';
 
 export type { Activity, Child } from '@starter/shared';
@@ -43,6 +43,8 @@ const ACTIVITIES: Activity[] = [
 ];
 
 interface Store {
+  customActivities: Array<{ userId: number; activity: Activity }>;
+  nextActivityId: number;
   children: Child[];
   schedules: Schedule[];
   tasks: Task[];
@@ -53,6 +55,8 @@ interface Store {
 
 function seed(): Store {
   return {
+    customActivities: [],
+    nextActivityId: ACTIVITIES.at(-1)!.id + 1,
     children: [
       { id: 1, user_id: 1, name: 'Mia', age: 6, delay_domain: 'speech', notes: null, avatar: '🦊', created_at: '2026-11-01T08:00:00.000Z' },
       { id: 2, user_id: 1, name: 'Leo', age: 8, delay_domain: 'motor', notes: null, avatar: '🐼', created_at: '2026-11-01T08:00:00.000Z' },
@@ -119,12 +123,20 @@ export function deleteChildForUser(childId: number, userId: number): boolean {
   return true;
 }
 
-export function listActivities(): Activity[] {
-  return ACTIVITIES;
+export function listActivities(userId: number): Activity[] {
+  return [...store.customActivities.filter((entry) => entry.userId === userId).map((entry) => entry.activity), ...ACTIVITIES];
 }
 
-export function findActivity(id: number): Activity | undefined {
-  return ACTIVITIES.find((a) => a.id === id);
+export function findActivity(id: number, userId: number): Activity | undefined {
+  return listActivities(userId).find((activity) => activity.id === id);
+}
+
+export function createActivity(userId: number, input: CreateActivityInput): Activity {
+  const existing = store.customActivities.find((entry) => entry.userId === userId && entry.activity.name.toLowerCase() === input.name.toLowerCase());
+  if (existing) return existing.activity;
+  const activity = { id: store.nextActivityId++, ...input };
+  store.customActivities.unshift({ userId, activity });
+  return activity;
 }
 
 export function isPredefinedIcon(icon: string): boolean {

@@ -13,7 +13,7 @@ async function openProgress(page: Page, empty = false) {
     else if (url.pathname === '/api/settings') body = { font_size: 'medium', contrast: 'normal', sound_on: true, voice_speed: 'normal' };
     else if (url.pathname === '/api/health') body = { status: 'ok', database: 'connected' };
     else if (url.pathname === '/api/cards') body = {};
-    else if (url.pathname === '/api/schedules') { status = 404; body = { error: 'Schedule not found' }; }
+    else if (url.pathname === '/api/schedules') body = null;
     else if (/^\/api\/progress\/\d+\/activities$/.test(url.pathname)) {
       const childId = Number(url.pathname.split('/')[3]);
       body = { child_id: childId, range: url.searchParams.get('range') ?? '7d', activities: childId === 1 ? [

@@ -1,13 +1,21 @@
 import { z } from 'zod';
+import { ACTIVITY_CATEGORIES, PREDEFINED_AVATARS, PREDEFINED_ICONS } from './constants.js';
 
 export const userRoleSchema = z.enum(['caregiver', 'ot', 'sped_teacher']);
 export const childDelayDomainSchema = z.enum(['speech', 'motor', 'cognitive', 'social', 'general']);
-export const activityCategorySchema = z.enum(['hygiene', 'food', 'school', 'play', 'other']);
+export const activityCategorySchema = z.enum(ACTIVITY_CATEGORIES);
 export const pictureCardCategorySchema = z.enum(['Food', 'Emotions', 'Activities', 'Needs']);
 export const positiveIdSchema = z.coerce.number().int().positive();
 
 export { PREDEFINED_AVATARS, PREDEFINED_ICONS } from './constants.js';
-import { PREDEFINED_AVATARS } from './constants.js';
+
+export const createActivitySchema = z.strictObject({
+  name: z.string().trim().min(1).max(100),
+  icon: z.enum(PREDEFINED_ICONS),
+  category: activityCategorySchema,
+});
+
+export type CreateActivityInput = z.infer<typeof createActivitySchema>;
 
 const childProfileFields = z.strictObject({
   name: z.string().trim().min(1).max(100),
@@ -45,6 +53,7 @@ export const idParamSchema = z.object({
 export const scheduleQuerySchema = z.object({
   childId: z.coerce.number().int().positive(),
   date: isoDate,
+  allowMissing: z.literal('true').optional(),
 });
 
 export const createScheduleSchema = z.object({

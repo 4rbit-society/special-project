@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 250" fill="none">
+  <defs>
+    <linearGradient id="rays" x1="100" y1="35" x2="223" y2="219" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFDB53"/>
+      <stop offset="1" stop-color="#FFA820"/>
+    </linearGradient>
+    <radialGradient id="face" cx="36%" cy="28%" r="77%">
+      <stop stop-color="#FFF5B3"/>
+      <stop offset=".75" stop-color="#FFDD67"/>
+      <stop offset="1" stop-color="#FFBE35"/>
+    </radialGradient>
+    <linearGradient id="clouds" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop stop-color="#FFF"/>
+      <stop offset="1" stop-color="#E7F6FF"/>
+    </linearGradient>
+    <path id="ray" d="M144 67 151 38Q155 24 166 32Q174 41 181 67Z"/>
+  </defs>
+  <g transform="rotate(12 162 146)">
+    <g fill="url(#rays)">
+      <use href="#ray" transform="rotate(-78 162 146)"/>
+      <use href="#ray" transform="rotate(-52 162 146)"/>
+      <use href="#ray" transform="rotate(-26 162 146)"/>
+      <use href="#ray"/>
+      <use href="#ray" transform="rotate(26 162 146)"/>
+      <use href="#ray" transform="rotate(52 162 146)"/>
+      <use href="#ray" transform="rotate(78 162 146)"/>
+    </g>
+    <circle cx="162" cy="146" r="84" fill="url(#face)" stroke="#FFDF72" stroke-width="4"/>
+    <circle cx="162" cy="146" r="79" stroke="#FFF7BC" stroke-opacity=".68" stroke-width="2"/>
+    <path d="M116 135C120 123 136 123 140 135M184 135C188 123 204 123 208 135M148 152C154 163 170 163 176 152" stroke="#382619" stroke-width="6.5" stroke-linecap="round"/>
+    <ellipse cx="106" cy="151" rx="13" ry="7.8" fill="#FF8791"/>
+    <ellipse cx="218" cy="151" rx="13" ry="7.8" fill="#FF8791"/>
+  </g>
+  <g fill="#FFD13C">
+    <rect x="243" y="48" width="32" height="10" rx="5" transform="rotate(-43 243 48)"/>
+    <rect x="256" y="70" width="37" height="10" rx="5" transform="rotate(-19 256 70)"/>
+    <rect x="224" y="29" width="24" height="9" rx="4.5" transform="rotate(-68 224 29)"/>
+  </g>
+  <path d="M10 234C10 200 38 178 72 182C86 154 120 148 142 166C166 150 202 160 212 186C238 174 268 186 274 214C298 208 322 220 330 242V250H10Z" fill="#D8EDFE"/>
+  <path d="M0 246C4 214 34 192 66 196C80 166 116 160 138 178C162 164 198 174 208 198C234 186 266 198 272 222C298 216 324 228 340 246V250H0Z" fill="url(#clouds)"/>
+</svg>

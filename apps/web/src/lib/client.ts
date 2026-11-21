@@ -1,5 +1,5 @@
 import { localDate } from './date';
-import type { ActivityProgressSummary, Activity, ApiCard, ApiSchedule, ApiSettings, ApiTask, Child, ChildProfileInput, HealthResponse, ProgressRange, ProgressSummary, PublicUser, ScheduleDraftInput } from '@starter/shared';
+import type { ActivityProgressSummary, Activity, ApiCard, ApiSchedule, ApiSettings, ApiTask, Child, ChildProfileInput, CreateActivityInput, HealthResponse, ProgressRange, ProgressSummary, PublicUser, ScheduleDraftInput } from '@starter/shared';
 
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) { super(message); this.name = 'ApiError'; }
@@ -48,7 +48,8 @@ export class ApiClient {
   updateChild = (id: number, input: ChildProfileInput) => this.request<Child>(`/children/${id}`, 'PUT', input);
   deleteChild = (id: number) => this.request<{ success: true }>(`/children/${id}`, 'DELETE');
   activities = () => this.request<Activity[]>('/activities');
-  schedule = (childId: number, date: string) => this.request<ApiSchedule>(`/schedules?${new URLSearchParams({ childId: String(childId), date })}`);
+  createActivity = (input: CreateActivityInput) => this.request<Activity>('/activities', 'POST', input);
+  schedule = (childId: number, date: string) => this.request<ApiSchedule | null>(`/schedules?${new URLSearchParams({ childId: String(childId), date, allowMissing: 'true' })}`);
   createSchedule = (childId: number, date: string, copyFrom?: string) => this.request<ApiSchedule>('/schedules', 'POST', { childId, date, copyFrom });
   saveSchedule = (input: ScheduleDraftInput) => this.request<ApiSchedule>('/schedules', 'PUT', input);
   moveSchedule = (id: number, date: string) => this.request<ApiSchedule>(`/schedules/${id}`, 'PUT', { date });

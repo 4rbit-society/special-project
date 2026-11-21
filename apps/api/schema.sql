@@ -27,11 +27,14 @@ CREATE TABLE IF NOT EXISTS children (
 
 CREATE TABLE IF NOT EXISTS activities (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id BIGINT UNSIGNED NULL,
+  catalog_owner BIGINT UNSIGNED GENERATED ALWAYS AS (COALESCE(user_id, 0)) VIRTUAL,
   name VARCHAR(100) NOT NULL,
   icon VARCHAR(32) NOT NULL,
   category ENUM('hygiene', 'food', 'school', 'play', 'other') NOT NULL,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_activities_name (name)
+  UNIQUE KEY uq_activities_catalog_name (catalog_owner, name),
+  CONSTRAINT fk_activities_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS schedules (

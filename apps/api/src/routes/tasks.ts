@@ -44,7 +44,7 @@ export function tasksRouter(users: UserRepository): Router {
       }
       let task: Task;
       if (body.activityId !== undefined) {
-        const activity = await findActivity(body.activityId);
+        const activity = await findActivity(body.activityId, currentUser(req).id);
         if (!activity) {
           throw new HttpError(400, 'Unknown activity');
         }

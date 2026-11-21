@@ -29,6 +29,17 @@ async function applySchema(): Promise<void> {
           "ALTER TABLE settings ADD COLUMN voice_speed ENUM('slow', 'normal', 'fast') NOT NULL DEFAULT 'normal' AFTER sound_on",
         );
       }
+      const [activityOwnerColumns] = await connection.query<RowDataPacket[]>(
+        "SHOW COLUMNS FROM activities LIKE 'user_id'",
+      );
+      if (activityOwnerColumns.length === 0) {
+        await connection.query(`ALTER TABLE activities
+          ADD COLUMN user_id BIGINT UNSIGNED NULL,
+          ADD COLUMN catalog_owner BIGINT UNSIGNED GENERATED ALWAYS AS (COALESCE(user_id, 0)) VIRTUAL,
+          DROP INDEX uq_activities_name,
+          ADD UNIQUE KEY uq_activities_catalog_name (catalog_owner, name),
+          ADD CONSTRAINT fk_activities_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE`);
+      }
     } finally {
       connection.release();
     }

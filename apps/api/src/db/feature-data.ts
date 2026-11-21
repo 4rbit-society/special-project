@@ -1,4 +1,4 @@
-import type { Activity, ActivityProgress, Child, ChildProfileInput, ChildProfileUpdate, ScheduleDraftInput } from '@starter/shared';
+import type { Activity, ActivityProgress, Child, ChildProfileInput, ChildProfileUpdate, CreateActivityInput, ScheduleDraftInput } from '@starter/shared';
 import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import * as mock from '../mocks/data.js';
 import { getDatabasePool } from './pool.js';
@@ -178,27 +178,51 @@ export async function deleteChildForUser(childId: number, userId: number): Promi
   return result.affectedRows > 0;
 }
 
-export async function listActivities(): Promise<Activity[]> {
+export async function listActivities(userId: number): Promise<Activity[]> {
   if (useMockStore()) {
-    return mock.listActivities();
+    return mock.listActivities(userId);
   }
 
   const [rows] = await getDatabasePool().query<ActivityRow[]>(
-    'SELECT id, name, icon, category FROM activities ORDER BY id ASC',
+    `SELECT id, name, icon, category FROM activities
+     WHERE user_id IS NULL OR user_id = ?
+     ORDER BY CASE WHEN user_id IS NOT NULL THEN id END DESC, id ASC`,
+    [userId],
   );
   return rows.map(normalizeActivity);
 }
 
-export async function findActivity(id: number): Promise<Activity | undefined> {
-  if (useMockStore()) {
-    return mock.findActivity(id);
-  }
-
-  const [rows] = await getDatabasePool().query<ActivityRow[]>(
-    'SELECT id, name, icon, category FROM activities WHERE id = ?',
-    [id],
+async function findDatabaseActivity(db: Pick<PoolConnection, 'query'>, id: number, userId: number): Promise<Activity | undefined> {
+  const [rows] = await db.query<ActivityRow[]>(
+    'SELECT id, name, icon, category FROM activities WHERE id = ? AND (user_id IS NULL OR user_id = ?)',
+    [id, userId],
   );
   return rows[0] ? normalizeActivity(rows[0]) : undefined;
+}
+
+export async function findActivity(id: number, userId: number): Promise<Activity | undefined> {
+  return useMockStore() ? mock.findActivity(id, userId) : findDatabaseActivity(getDatabasePool(), id, userId);
+}
+
+export async function createActivity(userId: number, input: CreateActivityInput): Promise<Activity> {
+  let activity: Activity;
+  if (useMockStore()) {
+    activity = mock.createActivity(userId, input);
+  } else {
+    const pool = getDatabasePool();
+    const [result] = await pool.execute<ResultSetHeader>(
+      `INSERT INTO activities (user_id, name, icon, category) VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`,
+      [userId, input.name, input.icon, input.category],
+    );
+    const saved = await findDatabaseActivity(pool, result.insertId, userId);
+    if (!saved) throw new HttpError(404, 'Activity not found');
+    activity = saved;
+  }
+  if (activity.icon !== input.icon || activity.category !== input.category) {
+    throw new HttpError(409, 'An activity with this name already exists in your library. Choose a different name.');
+  }
+  return activity;
 }
 
 export function isPredefinedIcon(icon: string): boolean {
@@ -590,7 +614,7 @@ export async function saveScheduleForUser(userId: number, draft: ScheduleDraftIn
     let schedule = mock.findScheduleByChildAndDate(draft.childId, draft.date);
     const old = schedule ? mock.tasksForSchedule(schedule.id) : [];
     validateSnapshot(schedule, old);
-    const contents = await resolveContent(async (id) => mock.findActivity(id));
+    const contents = await resolveContent(async (id) => mock.findActivity(id, userId));
     schedule ??= mock.createSchedule(draft.childId, draft.date);
     for (const task of old) if (!draft.tasks.some((item) => item.id === task.id)) mock.removeTask(task);
     draft.tasks.forEach((input, index) => {
@@ -610,10 +634,7 @@ export async function saveScheduleForUser(userId: number, draft: ScheduleDraftIn
     const [oldRows] = schedule ? await connection.query<TaskRow[]>('SELECT * FROM tasks WHERE schedule_id = ? ORDER BY position FOR UPDATE', [schedule.id]) : [[]];
     const old = oldRows.map(normalizeTask);
     validateSnapshot(schedule, old);
-    const contents = await resolveContent(async (id) => {
-      const [rows] = await connection.query<ActivityRow[]>('SELECT id, name, icon, category FROM activities WHERE id = ?', [id]);
-      return rows[0] ? normalizeActivity(rows[0]) : undefined;
-    });
+    const contents = await resolveContent((id) => findDatabaseActivity(connection, id, userId));
     if (!schedule) {
       const [result] = await connection.execute<ResultSetHeader>('INSERT INTO schedules (child_id, schedule_date) VALUES (?, ?)', [draft.childId, draft.date]);
       const [rows] = await connection.query<ScheduleRow[]>('SELECT * FROM schedules WHERE id = ?', [result.insertId]);

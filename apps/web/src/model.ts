@@ -1,4 +1,4 @@
-import type { ActivityProgressSummary, ApiCard, ProgressRange, ProgressSummary, PublicUser } from '@starter/shared';
+import type { ActivityProgressSummary, ApiCard, CreateActivityInput, ProgressRange, ProgressSummary, PublicUser } from '@starter/shared';
 
 export type StaffPage = 'dashboard' | 'profiles' | 'schedules' | 'tasks' | 'progress' | 'settings' | 'cards';
 export type Page = StaffPage | 'child' | 'login' | 'register';
@@ -64,6 +64,7 @@ export interface AppActions {
   copySchedule: (childId: number, date: string, from: string) => Promise<boolean>;
   moveSchedule: (schedule: DailySchedule, date: string) => Promise<boolean>;
   deleteSchedule: (schedule: DailySchedule) => Promise<boolean>;
+  createActivity: (input: CreateActivityInput) => Promise<AppData['activities'][number] | undefined>;
   addTask: (schedule: DailySchedule, activityId: string) => Promise<boolean>;
   moveTask: (schedule: DailySchedule, taskId: string, position: number) => Promise<boolean>;
   removeTask: (schedule: DailySchedule, taskId: string) => Promise<boolean>;

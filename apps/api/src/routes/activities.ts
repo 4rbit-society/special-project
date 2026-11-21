@@ -1,8 +1,10 @@
 import { Router } from 'express';
+import { createActivitySchema } from '@starter/shared';
 import type { UserRepository } from '../users/userRepository.js';
 import { asyncHandler } from '../lib/errors.js';
-import { requireAuth } from '../middleware/requireAuth.js';
-import { listActivities } from '../db/feature-data.js';
+import { parse } from '../lib/validate.js';
+import { currentUser, requireAuth } from '../middleware/requireAuth.js';
+import { createActivity, listActivities } from '../db/feature-data.js';
 
 export function activitiesRouter(users: UserRepository): Router {
   const router = Router();
@@ -10,8 +12,16 @@ export function activitiesRouter(users: UserRepository): Router {
 
   router.get(
     '/',
-    asyncHandler(async (_req, res) => {
-      res.json(await listActivities());
+    asyncHandler(async (req, res) => {
+      res.json(await listActivities(currentUser(req).id));
+    }),
+  );
+
+  router.post(
+    '/',
+    asyncHandler(async (req, res) => {
+      const input = parse(createActivitySchema, req.body);
+      res.status(201).json(await createActivity(currentUser(req).id, input));
     }),
   );
 

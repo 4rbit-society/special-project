@@ -27,18 +27,21 @@ export function StaffLayout({
   children: ReactNode;
 }) {
   return <div className="staff-workspace">
-    <nav id="staff-navigation" className={`staff-nav ${menuOpen ? 'open' : ''}`} aria-label="Staff navigation">
-      <div className="staff-nav-brand"><Brand /></div>
-      <div className="staff-nav-items">
-        {navItems.map((item) => {
-          const active = page === item.page || (item.page === 'schedules' && page === 'tasks');
-          return <button type="button" className={`staff-nav-link ${active ? 'active' : ''}`} key={item.page} aria-current={active ? 'page' : undefined} onClick={() => onNavigate(item.page)}>
-            <span className="staff-nav-icon"><ArawIcon name={active && item.activeIcon ? item.activeIcon : item.icon} /></span><span>{item.label}</span>
-          </button>;
-        })}
-        <Button className="staff-nav-logout" variant="outline" leadingIcon="logout" onClick={onLogout}>Log out</Button>
-      </div>
-    </nav>
+    <div className="staff-rail">
+      <nav id="staff-navigation" className={`staff-nav ${menuOpen ? 'open' : ''}`} aria-label="Staff navigation">
+        <div className="staff-nav-brand"><Brand /></div>
+        <div className="staff-nav-items">
+          {navItems.map((item) => {
+            const active = page === item.page || (item.page === 'schedules' && page === 'tasks');
+            return <button type="button" className={`staff-nav-link ${active ? 'active' : ''}`} key={item.page} aria-current={active ? 'page' : undefined} onClick={() => onNavigate(item.page)}>
+              <span className="staff-nav-icon"><ArawIcon name={active && item.activeIcon ? item.activeIcon : item.icon} /></span><span>{item.label}</span>
+            </button>;
+          })}
+          <Button className="staff-nav-logout" variant="outline" leadingIcon="logout" onClick={onLogout}>Log out</Button>
+        </div>
+      </nav>
+      <img className="staff-rail-sun" src="/araw/brand/peeking-sun-clouds.svg" alt="" />
+    </div>
     <div className="staff-layout">
     <header className="staff-header">
       <div className="staff-mobile-brand"><Brand /></div>

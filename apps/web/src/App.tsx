@@ -19,6 +19,7 @@ function pageFromHash(): Page {
 const messageOf = (error: unknown) => error instanceof Error ? error.message : 'The change could not be saved. Please retry.';
 function AuthScreen({ page, onPage, onLogin }: { page: 'login' | 'register'; onPage: (page: Page) => void; onLogin: (token: string, remember: boolean) => void }) {
   const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<PublicUser['role']>('caregiver'); const [remember, setRemember] = useState(false);
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const [registered, setRegistered] = useState(false); const register = page === 'register' && !registered;
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -31,16 +32,23 @@ function AuthScreen({ page, onPage, onLogin }: { page: 'login' | 'register'; onP
     } catch (error) { setError(messageOf(error)); } finally { setBusy(false); }
   }
   return <main className="auth-page"><div className="auth-layout">
-    <section className="auth-intro"><Brand reversed /><h1>A clear day,<br />one step at a time.</h1><p>Visual schedules and picture cards</p><img className="auth-hero-sun" src="/araw/brand/peeking-sun-clouds.svg" alt="" aria-hidden="true" /></section>
-    <form className={`auth-card ${register ? 'auth-card--register' : 'auth-card--login'}`} onSubmit={submit}><div className="auth-mobile-logo"><Brand /></div><h2>{register ? 'Create your account' : 'Welcome back'}</h2><p>{registered ? 'Your account was created. Log in to continue.' : 'For caregivers, OTs and SPED teachers.'}</p>
+    <div className="auth-hero-frame">
+      <section className="auth-intro"><Brand reversed /><h1>A clear day,<br />one step at a time.</h1><p>Visual schedules and picture cards</p><img className="auth-hero-sun" src="/araw/brand/auth-tilted-sun.svg" alt="" aria-hidden="true" /></section>
+    </div>
+    <form className={`auth-card ${register ? 'auth-card--register' : 'auth-card--login'}`} onSubmit={submit}><h2>{register ? 'Create your account' : 'Welcome back'}</h2><p>{registered ? 'Your account was created. Log in to continue.' : 'For caregivers, OTs and SPED teachers.'}</p>
       <fieldset className="workspace-lock" disabled={busy}>
         {register && <label className="auth-field auth-field--name">Name<input required maxLength={100} value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" placeholder="Enter your name" /></label>}
         <label className="auth-field auth-field--email">Email<input required type="email" maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder="Enter your email" /></label>
-        <label className="auth-field auth-field--password">Password<input required minLength={register ? 8 : 1} maxLength={72} type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={register ? 'new-password' : 'current-password'} placeholder={register ? 'Create a password' : 'Enter your password'} /></label>
+        <div className="auth-password">
+          <label className="auth-field auth-field--password">Password<input required minLength={register ? 8 : 1} maxLength={72} type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={register ? 'new-password' : 'current-password'} placeholder={register ? 'Create a password' : 'Enter your password'} /></label>
+          <button type="button" className="auth-password-toggle" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((value) => !value)}>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="2.5"/>{!showPassword && <path d="m3 3 18 18"/>}</svg>
+          </button>
+        </div>
         {register && <fieldset className="auth-role-group"><legend>Role</legend>{(['caregiver', 'ot', 'sped_teacher'] as const).map((item) => <label className={`auth-role ${role === item ? 'selected' : ''}`} key={item}><input type="radio" name="role" checked={role === item} onChange={() => setRole(item)} />{item === 'caregiver' ? 'Caregiver' : item === 'ot' ? 'OT' : 'SPED Teacher'}</label>)}</fieldset>}
         <label className="auth-role auth-remember"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />Remember me on this device</label>
         {error && <div className="auth-error" role="alert">{error}</div>}
-        <button className="button button-primary" type="submit">{busy ? 'Please wait…' : register ? 'Create account' : 'Log in'}</button>
+        <button className="button button-primary" type="submit">{busy ? 'Please wait…' : register ? 'Create account' : 'Log in'}<span className="auth-submit-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h13m-6-6 6 6-6 6" /></svg></span></button>
         <button className="button button-outline" type="button" onClick={() => { setError(''); setRegistered(false); onPage(register ? 'login' : 'register'); }}>{register ? 'Back to log in' : 'Create an account'}</button>
       </fieldset>
     </form></div></main>;

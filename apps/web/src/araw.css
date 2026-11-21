@@ -162,7 +162,6 @@ body { color: var(--araw-navy); background: #eaf7ff; }
 .staff-nav-link.active .araw-icon { filter:brightness(0) invert(1); }
 .staff-nav-logout { display:inline-flex; width:100%; }
 .staff-logout .araw-icon { width:20px; height:20px; }
-.child-view--high-contrast { background:#fff; }
 @media(max-width:700px) {
   .staff-account { display:none; }
   .staff-layout { background:linear-gradient(180deg,rgba(223,244,255,.68),rgba(223,248,245,.5)),url('/araw/backgrounds/sky-clouds-hills-svg.svg') center bottom / cover fixed; }

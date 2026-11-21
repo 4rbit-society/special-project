@@ -91,6 +91,16 @@ test('all mounted endpoints support a persisted browser workflow', async ({ page
   await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Updated Caregiver');
   await expect(page.getByRole('radio', { name: /Large/ })).toBeChecked();
   await expect(page.getByRole('radio', { name: 'Fast', exact: true })).toBeChecked();
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
+  await page.getByRole('button', { name: 'Open Child view', exact: true }).click();
+  const highContrastChild = page.locator('.child-view--high-contrast');
+  await expect(highContrastChild).toHaveCSS('background-image', /sky-clouds-hills-svg\.svg/);
+  await expect(highContrastChild.locator('.child-activity--done').first()).toHaveCSS('background-color', 'rgb(228, 253, 228)');
+  await page.getByRole('button', { name: 'Talk', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Picture cards', exact: true })).toBeVisible();
+  await expect(highContrastChild).toHaveCSS('background-image', /sky-clouds-hills-svg\.svg/);
+  await page.getByRole('button', { name: 'Return to staff workspace', exact: true }).click();
+  await page.getByRole('button', { name: 'Return to staff workspace', exact: true }).click();
   await page.getByRole('button', { name: 'Schedules', exact: true }).click();
   await openScheduleOption(page, 'Date');
   const sourceDate = await page.getByLabel('Date', { exact: true }).inputValue();

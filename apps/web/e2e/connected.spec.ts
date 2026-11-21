@@ -12,13 +12,24 @@ async function register(page: Page) {
 
 async function addFromLibrary(page: Page, name: string) {
   await page.getByRole('button', { name: 'Add activity', exact: true }).click();
-  await page.getByRole('dialog', { name: 'Activity library' }).locator('.schedule-library-item')
+  const library = page.getByRole('dialog', { name: 'Activity library' });
+  await library.locator('.schedule-library-item')
     .filter({ has: page.getByText(name, { exact: true }) }).getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(library).toHaveCount(0);
 }
 
 async function openScheduleOption(page: Page, name: string) {
   await page.getByRole('button', { name: 'Schedule options', exact: true }).click();
   await page.getByRole('menuitem').filter({ has: page.getByText(name, { exact: true }) }).click();
+}
+
+async function readScheduleDate(page: Page) {
+  await openScheduleOption(page, 'Date');
+  const dialog = page.getByRole('dialog', { name: 'Choose date' });
+  const date = await dialog.getByLabel('Date', { exact: true }).inputValue();
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  return date;
 }
 
 test('all mounted endpoints support a persisted browser workflow', async ({ page }) => {
@@ -112,9 +123,7 @@ test('all mounted endpoints support a persisted browser workflow', async ({ page
   await expect(page.getByText('Copied schedule saved', { exact: true })).toBeVisible();
   await page.getByLabel('Move saved schedule to date').fill('2099-12-21');
   await page.getByRole('button', { name: 'Change date', exact: true }).click();
-  await openScheduleOption(page, 'Date');
-  await expect(page.getByLabel('Date', { exact: true })).toHaveValue('2099-12-21');
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  expect(await readScheduleDate(page)).toBe('2099-12-21');
   await page.getByRole('button', { name: 'Delete schedule', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Delete schedule', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Child Profiles', exact: true }).click();
@@ -209,9 +218,7 @@ test('timing saves directly, protects drafts, and safely handles an empty date',
   const date = await page.getByLabel('Date', { exact: true }).inputValue();
   await page.getByLabel('Date', { exact: true }).fill('');
   await page.getByRole('button', { name: 'Go to date', exact: true }).click();
-  await openScheduleOption(page, 'Date');
-  await expect(page.getByLabel('Date', { exact: true })).toHaveValue(date);
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  expect(await readScheduleDate(page)).toBe(date);
   await page.getByRole('button', { name: 'Save schedule', exact: true }).first().click();
   await expect(page.getByText('Schedule saved', { exact: true })).toBeVisible();
   await page.reload();
@@ -307,9 +314,7 @@ test('stale timing conflicts retain the editor draft and the newer server timing
   const token = await page.evaluate(() => sessionStorage.getItem('araw-session-token-v1'));
   const headers = { Authorization: `Bearer ${token}` };
   const children = await (await page.request.get('/api/children', { headers })).json();
-  await openScheduleOption(page, 'Date');
-  const date = await page.getByLabel('Date', { exact: true }).inputValue();
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  const date = await readScheduleDate(page);
   const schedule = await (await page.request.get(`/api/schedules?childId=${children[0].id}&date=${date}`, { headers })).json();
   expect((await page.request.put(`/api/tasks/${schedule.tasks[0].id}`, { headers, data: { duration_min: 40 } })).ok()).toBe(true);
   await page.locator('.schedule-task').getByRole('button', { name: 'Edit', exact: true }).click();

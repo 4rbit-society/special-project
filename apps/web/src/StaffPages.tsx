@@ -112,7 +112,7 @@ function Dashboard({ data, selectedChildId, today, actions, onAddChild }: Props 
         <div className="staff-last-seven-actions">
           <label className="staff-picker">
             <span className="staff-picker-avatar" aria-hidden="true">{pickerFace(selectedChild.avatar)}</span>
-            <span>{selectedChild.name}</span>
+            <span className="staff-picker-label">{selectedChild.name}</span>
             <svg className="staff-picker-chevron" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5 6 6.5l5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
             <select aria-label="Child" value={selectedId} onChange={(event) => actions.selectChild(Number(event.target.value))}>{data.children.map((child) => <option key={child.id} value={child.id}>{child.name}</option>)}</select>
           </label>

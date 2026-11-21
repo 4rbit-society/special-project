@@ -210,7 +210,7 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
   function openChildModal() { setChildValue(selectedChildId); setChildOpen(true); setMenuOpen(false); }
   function applyChild() { actions.selectChild(childValue); setChildOpen(false); }
   function openDateModal() { setDateValue(date); setDateOpen(true); setMenuOpen(false); }
-  function applyDate() { changeDate(dateValue); setDateOpen(false); }
+  function applyDate() { if (!dateValue) { setDateValue(date); } else { changeDate(dateValue); } setDateOpen(false); }
   function openCopyModal() { setCopyDate(previousDate(date)); setCopyOpen(true); setMenuOpen(false); }
   function openPreview() { setMenuOpen(false); const tasks = withDetails(); if (tasks) { setDraft(tasks); setPreviewOpen(true); } }
   function openLibrary() { setLibraryFeedback(''); setShowLibrary(true); setMenuOpen(false); }

@@ -3,8 +3,6 @@
 .progress-heading p,.progress-week-heading p,.progress-section-heading p{color:var(--staff-muted);margin-top:4px}
 .progress-title-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
 .progress-heading>div{min-width:0}
-.progress-heading .staff-picker{max-width:100%}
-.progress-heading .staff-picker>span:not(.staff-picker-avatar){min-width:0;overflow:hidden;text-overflow:ellipsis}
 .progress-period-picker{gap:8px;padding:8px 14px 8px 12px;font-size:15px}
 .progress-period-picker-icon{width:16px;height:16px;flex:none;color:var(--staff-blue)}
 .progress-week-heading{padding-top:8px}

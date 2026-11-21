@@ -93,10 +93,18 @@ function Dashboard({ data, selectedChildId, today, actions, onAddChild }: Props 
       const schedule = data.schedules.find((item) => item.childId === child.id && item.date === today);
       const total = schedule?.tasks.length ?? 0;
       const done = schedule?.tasks.filter((task) => task.status === 'done').length ?? 0;
-      return <article className="staff-child-card" key={child.id}>
-        <Avatar avatar={child.avatar} variant="dashboard" /><h3>{child.name}</h3><p>{schedule ? `${done} of ${total} done · ${total ? Math.round(done / total * 100) : 0}%` : 'No schedule today · —'}</p>
-        <button className="staff-button primary" onClick={() => actions.openChild(child.id)}>Open Child view</button>
-        <button className="staff-button secondary" onClick={() => { actions.selectChild(child.id); actions.navigate('schedules'); }}>{schedule ? 'View schedule' : 'Create schedule'}</button>
+      return <article className="staff-child-card" key={child.id} aria-labelledby={`dashboard-child-${child.id}`}>
+        <div className="staff-dashboard-child-identity">
+          <Avatar avatar={child.avatar} variant="dashboard" />
+          <div>
+            <h3 id={`dashboard-child-${child.id}`}>{child.name}</h3>
+            <p>{total ? `${done} of ${total} done · ${Math.round(done / total * 100)}%` : schedule ? 'No activities scheduled' : 'No schedule today'}</p>
+          </div>
+        </div>
+        <div className="staff-dashboard-child-actions">
+          <button className="staff-button primary" onClick={() => actions.openChild(child.id)}>Open Child view</button>
+          <button className="staff-button secondary" onClick={() => { actions.selectChild(child.id); actions.navigate('schedules'); }}>{schedule ? 'View schedule' : 'Create schedule'}</button>
+        </div>
       </article>;
     })}</div></section>
     <section className="staff-panel staff-last-seven">

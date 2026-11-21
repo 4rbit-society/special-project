@@ -43,12 +43,13 @@ export function schedulesRouter(users: UserRepository): Router {
   router.get(
     '/',
     asyncHandler(async (req, res) => {
-      const { childId, date } = parse(scheduleQuerySchema, req.query);
+      const { childId, date, allowMissing } = parse(scheduleQuerySchema, req.query);
       if (!(await findChildForUser(childId, currentUser(req).id))) {
         throw new HttpError(404, 'Child not found');
       }
       const schedule = await findScheduleByChildAndDate(childId, date);
       if (!schedule) {
+        if (allowMissing) { res.json(null); return; }
         throw new HttpError(404, 'Schedule not found');
       }
       res.json(await serializeSchedule(schedule));

@@ -1,9 +1,11 @@
-import { PREDEFINED_ICONS } from '@starter/shared/constants';
+import { ACTIVITY_CATEGORIES, PREDEFINED_ICONS } from '@starter/shared/constants';
+import type { ActivityCategory } from '@starter/shared';
 import { ChildView } from './ChildView';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { DailySchedule, ScheduleTask, SharedPageProps } from './model';
 import './schedule.css';
 import { Modal } from './components/Modal';
+import { titleCase } from './lib/adapters';
 
 type SchedulePageProps = SharedPageProps & { page: 'schedules' | 'tasks' };
 
@@ -64,7 +66,11 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
   const [customOpen, setCustomOpen] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customIcon, setCustomIcon] = useState('⭐');
-  const [customCategory, setCustomCategory] = useState('Other');
+  const [customCategory, setCustomCategory] = useState<ActivityCategory>('other');
+  const [customError, setCustomError] = useState('');
+  const [customSaving, setCustomSaving] = useState(false);
+  const customSavingRef = useRef(false);
+  const [libraryFeedback, setLibraryFeedback] = useState('');
   const [notice, setNotice] = useState('');
   const child = data.children.find((item) => item.id === selectedChildId);
   const [baseSchedule, setBaseSchedule] = useState<DailySchedule | null>(null);
@@ -103,10 +109,10 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
     return () => { document.removeEventListener('mousedown', onPointer); document.removeEventListener('keydown', onKey); };
   }, [menuOpen]);
   function changeDate(next: string) { if (next && next !== date && (!dirty || page !== 'schedules' || window.confirm('Discard unsaved schedule changes?'))) setDate(next); }
-  function withDetails(): ScheduleTask[] | undefined {
+  function withDetails(onError = setNotice): ScheduleTask[] | undefined {
     if (!selected) return draft;
     const parsed = duration.trim() === '' ? null : Number(duration);
-    if (parsed !== null && (!Number.isInteger(parsed) || parsed < 1 || parsed > 1440)) { setNotice('Enter a whole number from 1 to 1440 for duration.'); return; }
+    if (parsed !== null && (!Number.isInteger(parsed) || parsed < 1 || parsed > 1440)) { onError('Enter a whole number from 1 to 1440 for duration.'); return; }
     return draft.map((task) => task.id === selected.id ? { ...task, startTime: time, duration: parsed } : task);
   }
   const done = savedSchedule?.tasks.filter((task) => task.status === 'done').length ?? 0;
@@ -121,15 +127,41 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
     if (saved) { setBaseSchedule(saved); setDraft(saved.tasks); setSelectedTaskId(null); setNotice('Schedule saved'); }
   }
 
-  function add(activity: LibraryActivity) {
-    const tasks = withDetails(); if (!tasks) return false;
+  function add(activity: LibraryActivity, tasks = withDetails(setLibraryFeedback)) {
+    if (!tasks) return;
     const task = newTask(activity);
     setDraft([...tasks, task]);
     setSelectedTaskId(task.id);
     setShowLibrary(false);
     setMobileEditing(false);
     setNotice('');
-    return true;
+  }
+
+  async function createCustomActivity(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = customName.trim();
+    if (customSavingRef.current) return;
+    if (!name) { setCustomError('Enter an activity name.'); return; }
+    setCustomError('');
+    const tasks = withDetails(setCustomError);
+    if (!tasks) return;
+
+    customSavingRef.current = true;
+    setCustomSaving(true);
+    try {
+      const activity = await actions.createActivity({ name, icon: customIcon, category: customCategory });
+      if (!activity) return;
+      add(activity, tasks);
+      setCustomName('');
+      setCustomOpen(false);
+      setLibraryFeedback(`Added ${activity.name} to your library and today’s schedule.`);
+      setShowLibrary(true);
+    } catch (error) {
+      setCustomError(error instanceof Error ? error.message : 'Could not save this activity. Please try again.');
+    } finally {
+      customSavingRef.current = false;
+      setCustomSaving(false);
+    }
   }
 
   function move(index: number, amount: number) {
@@ -181,7 +213,7 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
   function applyDate() { if (!dateValue) { setDateValue(date); } else { changeDate(dateValue); } setDateOpen(false); }
   function openCopyModal() { setCopyDate(previousDate(date)); setCopyOpen(true); setMenuOpen(false); }
   function openPreview() { setMenuOpen(false); const tasks = withDetails(); if (tasks) { setDraft(tasks); setPreviewOpen(true); } }
-  function openLibrary() { setShowLibrary(true); setMenuOpen(false); }
+  function openLibrary() { setLibraryFeedback(''); setShowLibrary(true); setMenuOpen(false); }
 
   if (!child) return <section className="schedule-empty"><h1>Schedules</h1><p>Add a child profile to get started.</p><button className="button button-primary" onClick={() => actions.navigate('profiles')}>Add child</button></section>;
 
@@ -250,9 +282,35 @@ export function SchedulePages({ page, data, selectedChildId, today, actions }: S
     <button className="schedule-status-link" onClick={() => actions.navigate('tasks')}>Recording what actually happened? Open Task status →</button>
     {childOpen && <Modal titleId="child-title" onClose={() => setChildOpen(false)}><div className="schedule-modal"><h2 id="child-title">Switch child</h2><p>Choose whose schedule you want to edit.</p><label>Child<select value={childValue} onChange={(event) => setChildValue(Number(event.target.value))}>{data.children.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><div className="schedule-modal-actions"><button className="button button-outline" onClick={() => setChildOpen(false)}>Cancel</button><button className="button button-primary" onClick={applyChild}>Switch child</button></div></div></Modal>}
     {dateOpen && <Modal titleId="date-title" onClose={() => setDateOpen(false)}><div className="schedule-modal"><h2 id="date-title">Choose date</h2><p>Pick the day you want to edit.</p><label>Date<input type="date" value={dateValue} onChange={(event) => setDateValue(event.target.value)} /></label><div className="schedule-modal-actions"><button className="button button-outline" onClick={() => setDateOpen(false)}>Cancel</button><button className="button button-primary" onClick={applyDate}>Go to date</button></div></div></Modal>}
-    {showLibrary && <Modal titleId="library-title" onClose={() => setShowLibrary(false)} className="schedule-dialog--wide"><div className="schedule-modal schedule-library-modal"><h2 id="library-title">Activity library</h2><p>Choose an activity to add to today’s schedule.</p><div className="schedule-library-items">{activities.map((activity) => <article className="schedule-library-item" key={activity.activityId}><div className="schedule-library-row"><ActivityIcon src={activity.icon} /><div><strong>{activity.name}</strong><CategoryChip category={activity.category} /></div></div><button className="button button-outline" onClick={() => add(activity)}>Add</button></article>)}</div><div className="schedule-modal-actions"><button className="button button-outline schedule-custom" onClick={() => { setShowLibrary(false); setCustomOpen(true); }}>Custom activity</button><button className="button button-primary" onClick={() => setShowLibrary(false)}>Done</button></div></div></Modal>}
+    {showLibrary && <Modal titleId="library-title" onClose={() => setShowLibrary(false)} className="schedule-dialog--wide">
+      <div className="schedule-modal schedule-library-modal">
+        <h2 id="library-title">Activity library</h2>
+        <p>Choose an activity to add to today’s schedule.</p>
+        {libraryFeedback && <p role="status">{libraryFeedback}</p>}
+        <div className="schedule-library-items">{activities.map((activity) => <article className="schedule-library-item" key={activity.activityId}>
+          <div className="schedule-library-row"><ActivityIcon src={activity.icon} /><div><strong>{activity.name}</strong><CategoryChip category={activity.category} /></div></div>
+          <button className="button button-outline" onClick={() => add(activity)}>Add</button>
+        </article>)}</div>
+        <div className="schedule-modal-actions">
+          <button className="button button-outline schedule-custom" onClick={() => { setCustomError(''); setShowLibrary(false); setCustomOpen(true); }}>Custom activity</button>
+          <button className="button button-primary" onClick={() => setShowLibrary(false)}>Done</button>
+        </div>
+      </div>
+    </Modal>}
     {previewOpen && <Modal titleId="preview-title" onClose={() => setPreviewOpen(false)} className="schedule-dialog--preview"><div className="schedule-preview"><div className="schedule-preview-head"><h2 id="preview-title">Preview</h2><button className="button button-outline" onClick={() => setPreviewOpen(false)}>Back to editor</button></div><div className="schedule-preview-body"><ChildView data={data} selectedChildId={selectedChildId} today={date} actions={{ ...actions, navigate: () => setPreviewOpen(false) }} preview={{ id: savedSchedule?.id ?? 'preview', childId: selectedChildId, date, tasks: draft }} /></div></div></Modal>}
     {copyOpen && <Modal titleId="copy-title" onClose={() => setCopyOpen(false)}><div className="schedule-modal"><h2 id="copy-title">Copy schedule from date</h2><p>Choose a day to copy activities into this draft.</p><label>Source date<input type="date" value={copyDate} onChange={(event) => setCopyDate(event.target.value)} /></label><p role="status">{notice}</p><div className="schedule-modal-actions"><button className="button button-outline" onClick={() => setCopyOpen(false)}>Cancel</button><button className="button button-primary" onClick={copySchedule}>Copy schedule</button></div></div></Modal>}
-    {customOpen && <Modal titleId="custom-title" onClose={() => setCustomOpen(false)}><form className="schedule-modal" onSubmit={(event) => { event.preventDefault(); if (!customName.trim()) return; if (add({ activityId: `custom-${Date.now()}`, name: customName.trim(), icon: customIcon, category: customCategory })) { setCustomName(''); setCustomOpen(false); } }}><h2 id="custom-title">Custom activity</h2><label>Name<input required maxLength={100} value={customName} onChange={(event) => setCustomName(event.target.value)} placeholder="Activity name" /></label><label>Picture<select value={customIcon} onChange={(event) => setCustomIcon(event.target.value)}>{PREDEFINED_ICONS.map((icon) => <option key={icon} value={icon}>{icon}</option>)}</select></label><label>Category<select value={customCategory} onChange={(event) => setCustomCategory(event.target.value)}>{['Hygiene', 'Food', 'School', 'Play', 'Other'].map((category) => <option key={category}>{category}</option>)}</select></label><div className="schedule-modal-actions"><button type="button" className="button button-outline" onClick={() => setCustomOpen(false)}>Cancel</button><button className="button button-primary" type="submit">Add activity</button></div></form></Modal>}
+    {customOpen && <Modal titleId="custom-title" onClose={() => { if (!customSavingRef.current) setCustomOpen(false); }}>
+      <form className="schedule-modal" onSubmit={createCustomActivity}>
+        <h2 id="custom-title">Custom activity</h2>
+        <label>Name<input required maxLength={100} value={customName} onChange={(event) => setCustomName(event.target.value)} placeholder="Activity name" disabled={customSaving} /></label>
+        <label>Picture<select value={customIcon} onChange={(event) => setCustomIcon(event.target.value)} disabled={customSaving}>{PREDEFINED_ICONS.map((icon) => <option key={icon} value={icon}>{icon}</option>)}</select></label>
+        <label>Category<select value={customCategory} onChange={(event) => setCustomCategory(event.target.value as ActivityCategory)} disabled={customSaving}>{ACTIVITY_CATEGORIES.map((category) => <option key={category} value={category}>{titleCase(category)}</option>)}</select></label>
+        {customError && <div className="auth-error" role="alert">{customError}</div>}
+        <div className="schedule-modal-actions">
+          <button type="button" className="button button-outline" onClick={() => setCustomOpen(false)} disabled={customSaving}>Cancel</button>
+          <button type="submit" className="button button-primary" disabled={customSaving}>{customSaving ? 'Adding…' : 'Add activity'}</button>
+        </div>
+      </form>
+    </Modal>}
   </div>;
 }

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import type { ApiSchedule, PublicUser } from '@starter/shared';
+import type { PublicUser } from '@starter/shared';
 import { ChildView } from './ChildView';
 import { SchedulePages } from './SchedulePages';
 import { StaffPages } from './StaffPages';
 import { StaffLayout } from './components/StaffLayout';
 import { Brand } from './components/ui';
-import { ApiClient, ApiError } from './lib/client';
+import { ApiClient } from './lib/client';
 import { activityFromApi, childFromApi, childToApi, draftToApi, emptyData, mergeSchedule, preferencesFromApi, preferencesToApi, scheduleFromApi, taskFromApi } from './lib/adapters';
 import type { AppActions, AppData, DailySchedule, Page, StaffPage } from './model';
 
@@ -19,6 +19,7 @@ function pageFromHash(): Page {
 const messageOf = (error: unknown) => error instanceof Error ? error.message : 'The change could not be saved. Please retry.';
 function AuthScreen({ page, onPage, onLogin }: { page: 'login' | 'register'; onPage: (page: Page) => void; onLogin: (token: string, remember: boolean) => void }) {
   const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<PublicUser['role']>('caregiver'); const [remember, setRemember] = useState(false);
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const [registered, setRegistered] = useState(false); const register = page === 'register' && !registered;
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -31,16 +32,23 @@ function AuthScreen({ page, onPage, onLogin }: { page: 'login' | 'register'; onP
     } catch (error) { setError(messageOf(error)); } finally { setBusy(false); }
   }
   return <main className="auth-page"><div className="auth-layout">
-    <section className="auth-intro"><Brand reversed /><h1>A clear day,<br />one step at a time.</h1><p>Visual schedules and picture cards</p><img className="auth-hero-sun" src="/araw/brand/peeking-sun-clouds.svg" alt="" aria-hidden="true" /></section>
-    <form className={`auth-card ${register ? 'auth-card--register' : 'auth-card--login'}`} onSubmit={submit}><div className="auth-mobile-logo"><Brand /></div><h2>{register ? 'Create your account' : 'Welcome back'}</h2><p>{registered ? 'Your account was created. Log in to continue.' : 'For caregivers, OTs and SPED teachers.'}</p>
+    <div className="auth-hero-frame">
+      <section className="auth-intro"><Brand reversed /><h1>A clear day,<br />one step at a time.</h1><p>Visual schedules and picture cards</p><img className="auth-hero-sun" src="/araw/brand/auth-tilted-sun.svg" alt="" aria-hidden="true" /></section>
+    </div>
+    <form className={`auth-card ${register ? 'auth-card--register' : 'auth-card--login'}`} onSubmit={submit}><h2>{register ? 'Create your account' : 'Welcome back'}</h2><p>{registered ? 'Your account was created. Log in to continue.' : 'For caregivers, OTs and SPED teachers.'}</p>
       <fieldset className="workspace-lock" disabled={busy}>
         {register && <label className="auth-field auth-field--name">Name<input required maxLength={100} value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" placeholder="Enter your name" /></label>}
         <label className="auth-field auth-field--email">Email<input required type="email" maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder="Enter your email" /></label>
-        <label className="auth-field auth-field--password">Password<input required minLength={register ? 8 : 1} maxLength={72} type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={register ? 'new-password' : 'current-password'} placeholder={register ? 'Create a password' : 'Enter your password'} /></label>
+        <div className="auth-password">
+          <label className="auth-field auth-field--password">Password<input required minLength={register ? 8 : 1} maxLength={72} type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={register ? 'new-password' : 'current-password'} placeholder={register ? 'Create a password' : 'Enter your password'} /></label>
+          <button type="button" className="auth-password-toggle" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((value) => !value)}>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="2.5"/>{!showPassword && <path d="m3 3 18 18"/>}</svg>
+          </button>
+        </div>
         {register && <fieldset className="auth-role-group"><legend>Role</legend>{(['caregiver', 'ot', 'sped_teacher'] as const).map((item) => <label className={`auth-role ${role === item ? 'selected' : ''}`} key={item}><input type="radio" name="role" checked={role === item} onChange={() => setRole(item)} />{item === 'caregiver' ? 'Caregiver' : item === 'ot' ? 'OT' : 'SPED Teacher'}</label>)}</fieldset>}
         <label className="auth-role auth-remember"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />Remember me on this device</label>
         {error && <div className="auth-error" role="alert">{error}</div>}
-        <button className="button button-primary" type="submit">{busy ? 'Please wait…' : register ? 'Create account' : 'Log in'}</button>
+        <button className="button button-primary" type="submit">{busy ? 'Please wait…' : register ? 'Create account' : 'Log in'}<span className="auth-submit-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h13m-6-6 6 6-6 6" /></svg></span></button>
         <button className="button button-outline" type="button" onClick={() => { setError(''); setRegistered(false); onPage(register ? 'login' : 'register'); }}>{register ? 'Back to log in' : 'Create an account'}</button>
       </fieldset>
     </form></div></main>;
@@ -70,9 +78,6 @@ export function App() {
     const timer = setInterval(() => { if (!busyRef.current && pageRef.current !== 'schedules') setToday(localDate()); }, 60_000);
     return () => { clearInterval(timer); window.removeEventListener('hashchange', hash); window.removeEventListener('storage', storage); };
   }, [logout]);
-  const fetchSchedule = useCallback(async (childId: number, date: string): Promise<ApiSchedule | null> => {
-    try { return await api.schedule(childId, date); } catch (error) { if (error instanceof ApiError && error.status === 404) return null; throw error; }
-  }, [api]);
   useEffect(() => {
     if (!token) return;
     const generation = ++epoch.current; let cancelled = false; busyRef.current = false; setBusy(false); setLoading(true); setLoadError('');
@@ -80,7 +85,7 @@ export function App() {
       try {
         const [user, children, activities, settings] = await Promise.all([api.me(), api.children(), api.activities(), api.settings(), api.health()]);
         const mappedActivities = activities.map(activityFromApi);
-        const records = await Promise.all(children.map(async (child) => ({ child, schedule: await fetchSchedule(child.id, today), progress: await api.progress(child.id) })));
+        const records = await Promise.all(children.map(async (child) => ({ child, schedule: await api.schedule(child.id, today), progress: await api.progress(child.id) })));
         if (cancelled || generation !== epoch.current) return;
         setData({ user, children: children.map(childFromApi), activities: mappedActivities, preferences: preferencesFromApi(settings), schedules: records.flatMap((item) => item.schedule ? [scheduleFromApi(item.schedule, mappedActivities)] : []), cards: {}, progress: Object.fromEntries(records.map((item) => [item.child.id, item.progress])) });
         setSelectedChildId((id) => children.some((child) => child.id === id) ? id : children[0]?.id ?? 0);
@@ -88,16 +93,16 @@ export function App() {
       finally { if (!cancelled && generation === epoch.current) setLoading(false); }
     })();
     return () => { cancelled = true; };
-  }, [token, api, fetchSchedule, retry, today]);
+  }, [token, api, retry, today]);
   const loadSchedule = useCallback(async (childId: number, date: string) => {
     const generation = epoch.current;
     try {
-      const result = await fetchSchedule(childId, date);
+      const result = await api.schedule(childId, date);
       if (generation !== epoch.current) return undefined;
       const schedule = result ? scheduleFromApi(result, dataRef.current.activities) : null;
       setData((current) => schedule ? mergeSchedule(current, schedule) : { ...current, schedules: current.schedules.filter((item) => !(item.childId === childId && item.date === date)) }); return schedule;
     } catch (error) { if (generation === epoch.current) setMessage(messageOf(error)); return undefined; }
-  }, [fetchSchedule]);
+  }, [api]);
   useEffect(() => {
     if (!token || !selectedChildId || loading || loadError) return;
     const generation = epoch.current; const revision = cardRevisions.current.get(selectedChildId) ?? 0; let cancelled = false;
@@ -126,7 +131,7 @@ export function App() {
   }
   const actions: AppActions = {
     navigate, setNavigationGuard, selectChild: (id) => { if (id !== selectedChildId && !leaveGuard.current()) return; setSelectedChildId(id); }, loadSchedule,
-    openChild: (id) => { if (!leaveGuard.current()) return; void (async () => { const ok = await perform(async () => { const [child, schedule, groups] = await Promise.all([api.child(id), fetchSchedule(id, today), api.cards(id)]); return (current) => ({ ...(schedule ? mergeSchedule(current, scheduleFromApi(schedule, current.activities)) : { ...current, schedules: current.schedules.filter((item) => !(item.childId === id && item.date === today)) }), children: current.children.map((item) => item.id === id ? childFromApi(child) : item), cards: { ...current.cards, [id]: Object.values(groups).flat() } }); }); if (ok) { setSelectedChildId(id); navigate('child', true); } })(); },
+    openChild: (id) => { if (!leaveGuard.current()) return; void (async () => { const ok = await perform(async () => { const [child, schedule, groups] = await Promise.all([api.child(id), api.schedule(id, today), api.cards(id)]); return (current) => ({ ...(schedule ? mergeSchedule(current, scheduleFromApi(schedule, current.activities)) : { ...current, schedules: current.schedules.filter((item) => !(item.childId === id && item.date === today)) }), children: current.children.map((item) => item.id === id ? childFromApi(child) : item), cards: { ...current.cards, [id]: Object.values(groups).flat() } }); }); if (ok) { setSelectedChildId(id); navigate('child', true); } })(); },
     addChild: async (input) => { let id = 0; const ok = await perform(async () => { const child = await api.createChild(childToApi(input)); id = child.id; return (current) => ({ ...current, children: [...current.children, childFromApi(child)] }); }); if (ok) { setSelectedChildId(id); refreshProgress(id); } return ok; },
     updateChild: (input) => perform(async () => { const child = await api.updateChild(input.id, childToApi(input)); return (current) => ({ ...current, children: current.children.map((item) => item.id === child.id ? childFromApi(child) : item) }); }),
     deleteChild: async (id) => { const ok = await perform(async () => { await api.deleteChild(id); return (current) => ({ ...current, children: current.children.filter((child) => child.id !== id), schedules: current.schedules.filter((item) => item.childId !== id), cards: Object.fromEntries(Object.entries(current.cards).filter(([key]) => Number(key) !== id)), progress: Object.fromEntries(Object.entries(current.progress).filter(([key]) => Number(key) !== id)) }); }); if (ok && selectedChildId === id) setSelectedChildId(data.children.find((child) => child.id !== id)?.id ?? 0); return ok; },
@@ -135,6 +140,14 @@ export function App() {
     copySchedule: (childId, date, from) => refreshAfter(childId, async () => { const saved = await api.createSchedule(childId, date, from); return (current) => mergeSchedule(current, scheduleFromApi(saved, current.activities)); }),
     moveSchedule: (schedule, date) => refreshAfter(schedule.childId, async () => { const moved = await api.moveSchedule(Number(schedule.id), date); return (current) => mergeSchedule({ ...current, schedules: current.schedules.filter((item) => item.id !== schedule.id) }, scheduleFromApi(moved, current.activities)); }),
     deleteSchedule: (schedule) => refreshAfter(schedule.childId, async () => { await api.deleteSchedule(Number(schedule.id)); return (current) => ({ ...current, schedules: current.schedules.filter((item) => item.id !== schedule.id) }); }),
+    createActivity: async (input) => {
+      const generation = epoch.current;
+      const activity = activityFromApi(await api.createActivity(input));
+      if (generation !== epoch.current) return undefined;
+      setData((current) => current.activities.some((item) => item.activityId === activity.activityId)
+        ? current : { ...current, activities: [activity, ...current.activities] });
+      return activity;
+    },
     markTask: (childId, taskId, done, date = today) => refreshAfter(childId, async () => { const task = await api.completeTask(Number(taskId), done); return (current) => ({ ...current, schedules: current.schedules.map((schedule) => schedule.childId === childId && schedule.date === date ? { ...schedule, tasks: schedule.tasks.map((item) => item.id === taskId ? taskFromApi(task, current.activities) : item) } : schedule) }); }),
     addTask: (schedule, activityId) => refreshAfter(schedule.childId, async () => { const task = await api.createTask(Number(schedule.id), Number(activityId)); return (current) => ({ ...current, schedules: current.schedules.map((item) => item.id === schedule.id ? { ...item, tasks: [...item.tasks, taskFromApi(task, current.activities)] } : item) }); }),
     moveTask: (schedule, taskId, position) => perform(async () => { const task = await api.updateTask(Number(taskId), { position }); return (current) => ({ ...current, schedules: current.schedules.map((item) => { if (item.id !== schedule.id) return item; const tasks = item.tasks.filter((entry) => entry.id !== taskId); tasks.splice(task.position - 1, 0, taskFromApi(task, current.activities)); return { ...item, tasks }; }) }); }),

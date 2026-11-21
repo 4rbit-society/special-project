@@ -123,6 +123,16 @@ describe('POST /api/schedules', () => {
 });
 
 describe('GET /api/schedules', () => {
+  it('can return an empty calendar day while preserving child ownership checks', async () => {
+    const query = { childId: 1, date: DATE, allowMissing: 'true' };
+    const empty = await request(app).get('/api/schedules').set(alice).query(query).expect(200);
+    expect(empty.body).toBeNull();
+    await request(app).get('/api/schedules').set(bob).query(query).expect(404);
+    const created = await createSchedule().expect(201);
+    const existing = await request(app).get('/api/schedules').set(alice).query(query).expect(200);
+    expect(existing.body.id).toBe(created.body.id);
+  });
+
   it('returns the schedule with tasks ordered by position', async () => {
     const created = await createSchedule();
     const ids: number[] = [];

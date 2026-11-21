@@ -1,9 +1,12 @@
 import type { Activity } from '@starter/shared';
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { resetStore } from '../../src/mocks/data.js';
 import { createTestApp } from '../../src/testing/testApp.js';
 
 const { app, alice, bob } = await createTestApp();
+
+beforeEach(resetStore);
 
 describe('GET /api/activities', () => {
   it('requires a valid token', async () => {
@@ -38,4 +41,28 @@ describe('GET /api/activities', () => {
       expect(activity.icon.length).toBeGreaterThan(0);
     }
   });
+});
+
+it('keeps custom activities reusable within the owner’s library and private across accounts', async () => {
+  const input = { name: 'Story time', icon: '\u2B50', category: 'school' };
+  const created = await request(app).post('/api/activities').set(alice).send(input).expect(201);
+  const activityId = created.body.id;
+  expect(created.body).toEqual({ id: activityId, ...input });
+
+  const retry = await request(app).post('/api/activities').set(alice).send(input).expect(201);
+  expect(retry.body.id).toBe(activityId);
+  await request(app).post('/api/activities').set(alice).send({ ...input, category: 'play' }).expect(409);
+  const library = await request(app).get('/api/activities').set(alice).expect(200);
+  expect((library.body as Activity[]).filter((activity) => activity.id === activityId)).toEqual([created.body]);
+  const otherLibrary = await request(app).get('/api/activities').set(bob).expect(200);
+  expect(otherLibrary.body).not.toContainEqual(created.body);
+
+  const draft = { date: '2099-12-17', expectedTaskIds: [], tasks: [{ activityId, start_time: null, duration_min: null }] };
+  const saved = await request(app).put('/api/schedules').set(alice).send({ ...draft, childId: 1 }).expect(200);
+  expect(saved.body.tasks[0]).toMatchObject({ activity_id: activityId, name: input.name, icon: input.icon });
+  await request(app).put('/api/schedules').set(bob).send({ ...draft, childId: 3 }).expect(400);
+
+  const otherSchedule = await request(app).post('/api/schedules').set(bob).send({ childId: 3, date: draft.date }).expect(201);
+  await request(app).post('/api/tasks').set(bob).send({ scheduleId: otherSchedule.body.id, activityId }).expect(400);
+  await request(app).post('/api/activities').set(bob).send(input).expect(201);
 });

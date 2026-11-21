@@ -153,7 +153,7 @@ async function seedData(): Promise<void> {
         for (const [index, task] of child.tasks.entries()) {
           const activityId = await findId(
             connection,
-            'SELECT id FROM activities WHERE name = ?',
+            'SELECT id FROM activities WHERE name = ? AND user_id IS NULL',
             [task.activity],
           );
           await connection.execute<ResultSetHeader>(
